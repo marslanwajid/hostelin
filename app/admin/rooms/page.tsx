@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { IconBuilding, IconBed, IconImage, IconTrash, IconUsers, IconCheck, IconX } from "@/components/icons";
+import { IconBuilding, IconBed, IconImage, IconTrash, IconCheck, IconX } from "@/components/icons";
+import Swal from "sweetalert2";
 
 interface MockBed {
   id: string;
   isOccupied: boolean;
   occupantName?: string;
-  occupantContact?: string;
 }
 
 interface MockRoom {
@@ -35,8 +35,8 @@ export default function RoomsManagement() {
           roomNumber: "101",
           floor: 1,
           beds: [
-            { id: "b1-1", isOccupied: true, occupantName: "Ali Khan", occupantContact: "0300-1234567" },
-            { id: "b1-2", isOccupied: true, occupantName: "Usman Tariq", occupantContact: "0321-9876543" },
+            { id: "b1-1", isOccupied: true, occupantName: "Ali Khan" },
+            { id: "b1-2", isOccupied: true, occupantName: "Usman Tariq" },
             { id: "b1-3", isOccupied: false },
           ],
           images: [],
@@ -57,70 +57,53 @@ export default function RoomsManagement() {
 
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
 
-  // Modal State
-  const [selectedBed, setSelectedBed] = useState<{ buildingId: string; roomId: string; bedId: string; bedName: string } | null>(null);
-  const [occupantName, setOccupantName] = useState("");
-  const [occupantContact, setOccupantContact] = useState("");
-
-  const handleBedClick = (buildingId: string, roomId: string, bed: MockBed, bedIndex: number) => {
+  const toggleBedOccupancy = (buildingId: string, roomId: string, bed: MockBed) => {
     if (bed.isOccupied) {
-      // If already occupied, clicking it will vacate the bed
-      if (window.confirm(`Are you sure you want to vacate ${bed.occupantName}'s bed?`)) {
-        setData((prev) =>
-          prev.map((b) => {
-            if (b.buildingId !== buildingId) return b;
-            return {
-              ...b,
-              rooms: b.rooms.map((r) => {
-                if (r.id !== roomId) return r;
-                return {
-                  ...r,
-                  beds: r.beds.map((dbed) => {
-                    if (dbed.id !== bed.id) return dbed;
-                    return { ...dbed, isOccupied: false, occupantName: undefined, occupantContact: undefined };
-                  }),
-                };
-              }),
-            };
-          })
-        );
-      }
+      // It is occupied and we are trying to vacate it
+      Swal.fire({
+        title: "Vacate Bed?",
+        text: `Are you sure you want to mark this bed as vacant?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "var(--wizard-red, #C0392B)",
+        cancelButtonColor: "#888",
+        confirmButtonText: "Yes, Vacate it!"
+      }).then((result) => {
+        if (result.isConfirmed) {
+          updateBedState(buildingId, roomId, bed.id, false, undefined);
+          Swal.fire({
+            title: "Vacated!",
+            text: "The bed has been marked as available.",
+            icon: "success",
+            confirmButtonColor: "var(--wizard-red, #C0392B)",
+          });
+        }
+      });
     } else {
-      // If free, open the modal to assign occupant details
-      setSelectedBed({ buildingId, roomId, bedId: bed.id, bedName: `Bed ${bedIndex + 1}` });
-      setOccupantName("");
-      setOccupantContact("");
+      // It is available, instantly mark as occupied
+      updateBedState(buildingId, roomId, bed.id, true, "New Occupant");
     }
   };
 
-  const handleAssignBed = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedBed) return;
-
+  const updateBedState = (buildingId: string, roomId: string, bedId: string, isOccupied: boolean, occupantName?: string) => {
     setData((prev) =>
       prev.map((b) => {
-        if (b.buildingId !== selectedBed.buildingId) return b;
+        if (b.buildingId !== buildingId) return b;
         return {
           ...b,
           rooms: b.rooms.map((r) => {
-            if (r.id !== selectedBed.roomId) return r;
+            if (r.id !== roomId) return r;
             return {
               ...r,
-              beds: r.beds.map((bed) => {
-                if (bed.id !== selectedBed.bedId) return bed;
-                return { 
-                  ...bed, 
-                  isOccupied: true, 
-                  occupantName: occupantName || "New Occupant",
-                  occupantContact: occupantContact || undefined
-                };
+              beds: r.beds.map((dbed) => {
+                if (dbed.id !== bedId) return dbed;
+                return { ...dbed, isOccupied, occupantName };
               }),
             };
           }),
         };
       })
     );
-    setSelectedBed(null);
   };
 
   const handleFileChange = (buildingId: string, roomId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,7 +195,7 @@ export default function RoomsManagement() {
                       {room.beds.map((bed, index) => (
                         <div
                           key={bed.id}
-                          onClick={() => handleBedClick(building.buildingId, room.id, bed, index)}
+                          onClick={() => toggleBedOccupancy(building.buildingId, room.id, bed)}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -223,24 +206,19 @@ export default function RoomsManagement() {
                             backgroundColor: bed.isOccupied ? "#fef2f2" : "#f0fdf4",
                             cursor: "pointer",
                             transition: "all 0.2s",
-                            minWidth: 160,
+                            minWidth: 140,
                           }}
                         >
-                          <div style={{ width: 24, height: 24, borderRadius: "50%", backgroundColor: bed.isOccupied ? "#ef4444" : "#22c55e", color: "white", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <div style={{ width: 24, height: 24, borderRadius: "50%", backgroundColor: bed.isOccupied ? "#ef4444" : "#22c55e", color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
                             {bed.isOccupied ? <IconX size={14} /> : <IconCheck size={14} />}
                           </div>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700, color: bed.isOccupied ? "#991b1b" : "#166534" }}>
                               Bed {index + 1}
                             </div>
-                            <div style={{ fontSize: 12, color: bed.isOccupied ? "#ef4444" : "#22c55e", fontWeight: 600, whiteSpace: "nowrap" }}>
+                            <div style={{ fontSize: 11, color: bed.isOccupied ? "#ef4444" : "#22c55e", fontWeight: 600 }}>
                               {bed.isOccupied ? bed.occupantName : "Available"}
                             </div>
-                            {bed.isOccupied && bed.occupantContact && (
-                              <div style={{ fontSize: 10, color: "#ef4444", opacity: 0.8, marginTop: 2 }}>
-                                {bed.occupantContact}
-                              </div>
-                            )}
                           </div>
                         </div>
                       ))}
@@ -305,70 +283,6 @@ export default function RoomsManagement() {
           </div>
         ))}
       </div>
-
-      {/* Assign Occupant Modal */}
-      {selectedBed && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, bottom: 0, 
-          backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
-          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999
-        }}>
-          <div className="wizard-card" style={{ width: 400, maxWidth: "90%", padding: 32, margin: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <h3 style={{ margin: 0, fontFamily: "var(--font-plus-jakarta), sans-serif", fontSize: 20, color: "#2C2C2C" }}>
-                Assign {selectedBed.bedName}
-              </h3>
-              <button 
-                onClick={() => setSelectedBed(null)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#999" }}
-              >
-                <IconX size={20} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleAssignBed}>
-              <div className="wizard-form-group">
-                <label className="wizard-label">Occupant Name (Optional)</label>
-                <input
-                  type="text"
-                  className="wizard-input"
-                  placeholder="e.g. Ali Khan"
-                  value={occupantName}
-                  onChange={(e) => setOccupantName(e.target.value)}
-                />
-              </div>
-              <div className="wizard-form-group">
-                <label className="wizard-label">Contact Number (Optional)</label>
-                <input
-                  type="text"
-                  className="wizard-input"
-                  placeholder="e.g. 0300-1234567"
-                  value={occupantContact}
-                  onChange={(e) => setOccupantContact(e.target.value)}
-                />
-              </div>
-              
-              <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
-                <button 
-                  type="button" 
-                  className="wizard-btn wizard-btn-back"
-                  style={{ flex: 1, justifyContent: "center" }}
-                  onClick={() => setSelectedBed(null)}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="wizard-btn wizard-btn-submit"
-                  style={{ flex: 1, justifyContent: "center" }}
-                >
-                  Confirm Assignment
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
