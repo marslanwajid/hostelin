@@ -152,6 +152,7 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "scale(1)";
                 }}
+                onClick={() => router.push("/sign-in")}
               >
                 Sign In
               </button>
@@ -244,6 +245,10 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
               List Hostel
             </button>
             <button
+              onClick={() => {
+                router.push("/sign-in");
+                setMenuOpen(false);
+              }}
               style={{
                 flex: 1,
                 padding: "11px 0",
