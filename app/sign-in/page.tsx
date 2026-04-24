@@ -13,13 +13,20 @@ export default function SignInPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    // Check if already authenticated
+    const isAuth = localStorage.getItem("hostelIn_auth");
+    if (isAuth === "true") {
+      router.push("/admin");
+      return;
+    }
+
     const red = "#C0392B";
     const r = parseInt(red.slice(1, 3), 16);
     const g = parseInt(red.slice(3, 5), 16);
     const b = parseInt(red.slice(5, 7), 16);
     document.documentElement.style.setProperty('--wizard-red', red);
     document.documentElement.style.setProperty('--wizard-red-rgb', `${r}, ${g}, ${b}`);
-  }, []);
+  }, [router]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -12,6 +12,7 @@ interface NavbarProps {
 }
 
 export default function Navbar({ scrolled, tweaks, forceSolid = false }: NavbarProps) {
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const red = tweaks?.primaryColor || "#C0392B";
   const router = useRouter();
@@ -28,6 +29,10 @@ export default function Navbar({ scrolled, tweaks, forceSolid = false }: NavbarP
     textShadow: isScrolled ? "none" : "0 1px 6px rgba(0,0,0,0.4)",
     letterSpacing: "0.01em",
   });
+
+  React.useEffect(() => {
+    setIsLoggedIn(localStorage.getItem("hostelIn_auth") === "true");
+  }, []);
 
   return (
     <>
@@ -161,9 +166,9 @@ export default function Navbar({ scrolled, tweaks, forceSolid = false }: NavbarP
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "scale(1)";
                 }}
-                onClick={() => router.push("/sign-in")}
+                onClick={() => router.push(isLoggedIn ? "/admin" : "/sign-in")}
               >
-                Sign In
+                {isLoggedIn ? "Dashboard" : "Sign In"}
               </button>
             </div>
           </div>
@@ -255,7 +260,7 @@ export default function Navbar({ scrolled, tweaks, forceSolid = false }: NavbarP
             </button>
             <button
               onClick={() => {
-                router.push("/sign-in");
+                router.push(isLoggedIn ? "/admin" : "/sign-in");
                 setMenuOpen(false);
               }}
               style={{
@@ -271,7 +276,7 @@ export default function Navbar({ scrolled, tweaks, forceSolid = false }: NavbarP
                 cursor: "pointer",
               }}
             >
-              Sign In
+              {isLoggedIn ? "Dashboard" : "Sign In"}
             </button>
           </div>
         </div>
