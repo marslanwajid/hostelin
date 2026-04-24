@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 
 /* ============================================================
    SHARED TYPES
@@ -46,156 +46,6 @@ export interface HostelMeta {
   adminFullName: string;
   adminEmail: string;
   hostelId: string;
-  createdAt: string;
-}
-
-/* ============================================================
-   HELPERS
-   ============================================================ */
-
-let _ctr = 0;
-export const uid = (p = "id") => `${p}_${Date.now()}_${++_ctr}`;
-
-export const makeBeds = (n: number): MockBed[] =>
-  Array.from({ length: n }, () => ({
-    id: uid("bed"),
-    isOccupied: false,
-  }));
-
-/* ============================================================
-   WIZARD → ADMIN DATA TRANSFORMER
-   ============================================================ */
-
-interface WizardBuilding {
-  id: string;
-  name: string;
-  floors: number;
-  gender: string;
-}
-
-interface WizardRoom {
-  id: string;
-  buildingId: string;
-  floor: number;
-  roomNumber: string;
-  beds: number;
-}
-
-interface WizardListing {
-  id: string;
-  hostelName: string;
-  city: string;
-  town: string;
-  adminFullName: string;
-  adminEmail: string;
-  adminPassword: string;
-  buildings: WizardBuilding[];
-  rooms: WizardRoom[];
-  createdAt: string;
-  // There may be other fields (pricing, images, etc.) we don't need here
-  [key: string]: unknown;
-}
-
-function mapGender(g: string): "Boys" | "Girls" | "Co-ed" {
-  const lower = g.toLowerCase();
-  if (lower === "boys" || lower === "male") return "Boys";
-  if (lower === "girls" || lower === "female") return "Girls";
-  return "Co-ed";
-}
-
-function transformWizardToAdmin(listing: WizardListing): MockBuilding[] {
-  return listing.buildings.map((wb) => {
-    // Find rooms for this building
-    const buildingRooms = listing.rooms.filter((r) => r.buildingId === wb.id);
-
-    // Group rooms by floor number
-    const floorMap = new Map<number, WizardRoom[]>();
-    for (const room of buildingRooms) {
-      const floorNum = room.floor;
-      if (!floorMap.has(floorNum)) floorMap.set(floorNum, []);
-      floorMap.get(floorNum)!.push(room);
-    }
-
-    // If no rooms yet, create empty floors based on the building's floor count
-    const floors: MockFloor[] = [];
-    const maxFloor = Math.max(wb.floors, ...Array.from(floorMap.keys()));
-    for (let i = 1; i <= maxFloor; i++) {
-      const floorRooms = floorMap.get(i) || [];
-      floors.push({
-        id: `fl_${wb.id}_${i}`,
-        floorNumber: i,
-        rooms: floorRooms.map((wr) => ({
-          id: wr.id,
-          roomNumber: wr.roomNumber,
-          beds: makeBeds(wr.beds || 2),
-          images: [],
-        })),
-      });
-    }
-
-    return {
-      id: wb.id,
-      name: wb.name,
-      gender: mapGender(wb.gender),
-      images: [],
-      floors,
-    };
-  });
-}
-
-/* ============================================================
-   LOCALSTORAGE KEYS
-   ============================================================ */
-
-const LS_LISTINGS = "hostelIn_listings";
-const LS_ACTIVE = "hostelIn_activeHostel";
-const LS_ADMIN_DATA = "hostelIn_adminData"; // persisted admin state
-
-/* ============================================================
-   LOAD DATA FROM LOCALSTORAGE
-   ============================================================ */
-
-function loadAdminState(): { buildings: MockBuilding[]; meta: HostelMeta | null } {
-  try {
-    const activeId = localStorage.getItem(LS_ACTIVE);
-    if (!activeId) return { buildings: [], meta: null };
-
-    // First check if admin has made edits (persisted admin data)
-    const savedAdmin = localStorage.getItem(LS_ADMIN_DATA);
-    if (savedAdmin) {
-      const parsed = JSON.parse(savedAdmin);
-      if (parsed.hostelId === activeId && parsed.buildings) {
-        return {
-          buildings: parsed.buildings,
-          meta: parsed.meta || null,
-        };
-      }
-    }
-
-    // Otherwise, transform from wizard listings
-    const listingsRaw = localStorage.getItem(LS_LISTINGS);
-    if (!listingsRaw) return { buildings: [], meta: null };
-
-    const listings: WizardListing[] = JSON.parse(listingsRaw);
-    const listing = listings.find((l) => l.id === activeId);
-    if (!listing) return { buildings: [], meta: null };
-
-    const buildings = transformWizardToAdmin(listing);
-    const meta: HostelMeta = {
-      hostelName: listing.hostelName,
-      city: listing.city,
-      town: listing.town || "",
-      adminFullName: listing.adminFullName,
-      adminEmail: listing.adminEmail,
-      hostelId: listing.id,
-      createdAt: listing.createdAt,
-    };
-
-    return { buildings, meta };
-  } catch (err) {
-    console.error("Failed to load admin state:", err);
-    return { buildings: [], meta: null };
-  }
 }
 
 /* ============================================================
@@ -226,6 +76,21 @@ interface AdminDataContextType {
   setBuildings: React.Dispatch<React.SetStateAction<MockBuilding[]>>;
   meta: HostelMeta | null;
   setMeta: React.Dispatch<React.SetStateAction<HostelMeta | null>>;
+  loading: boolean;
+  refetch: () => Promise<void>;
+  // API helpers for CRUD (so pages don't need to manage fetch + state sync)
+  apiAddBuilding: (name: string, gender: string) => Promise<MockBuilding | null>;
+  apiEditBuilding: (buildingId: string, name: string, gender: string) => Promise<boolean>;
+  apiDeleteBuilding: (buildingId: string) => Promise<boolean>;
+  apiAddFloor: (buildingId: string, floorNumber: number) => Promise<MockFloor | null>;
+  apiEditFloor: (floorId: string, floorNumber: number) => Promise<boolean>;
+  apiDeleteFloor: (floorId: string) => Promise<boolean>;
+  apiAddRoom: (floorId: string, roomNumber: string, bedCount: number) => Promise<MockRoom | null>;
+  apiEditRoom: (roomId: string, roomNumber: string) => Promise<boolean>;
+  apiDeleteRoom: (roomId: string) => Promise<boolean>;
+  apiAddBed: (roomId: string) => Promise<MockBed | null>;
+  apiToggleBed: (bedId: string, isOccupied: boolean, occupantName?: string) => Promise<boolean>;
+  apiDeleteBed: (bedId: string) => Promise<boolean>;
 }
 
 const AdminDataContext = createContext<AdminDataContextType | null>(null);
@@ -237,34 +102,290 @@ const AdminDataContext = createContext<AdminDataContextType | null>(null);
 export function AdminDataProvider({ children }: { children: ReactNode }) {
   const [buildings, setBuildings] = useState<MockBuilding[]>([]);
   const [meta, setMeta] = useState<HostelMeta | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Load from localStorage on mount (client-side only)
-  useEffect(() => {
-    const state = loadAdminState();
-    setBuildings(state.buildings);
-    setMeta(state.meta);
-    setLoaded(true);
-  }, []);
-
-  // Persist changes to localStorage whenever buildings change
-  useEffect(() => {
-    if (!loaded) return; // Don't persist the initial empty state
+  const fetchBuildings = useCallback(async () => {
     try {
-      const activeId = localStorage.getItem(LS_ACTIVE);
-      if (activeId) {
-        localStorage.setItem(
-          LS_ADMIN_DATA,
-          JSON.stringify({ hostelId: activeId, buildings, meta })
-        );
+      const hostelId = localStorage.getItem("hostelIn_activeHostel");
+      if (!hostelId) { setLoading(false); return; }
+
+      // Also load meta from localStorage (set at login time)
+      const metaStr = localStorage.getItem("hostelIn_meta");
+      if (metaStr) {
+        try { setMeta(JSON.parse(metaStr)); } catch {}
+      }
+
+      const res = await fetch(`/api/hostel/buildings?hostelId=${hostelId}`);
+      const data = await res.json();
+      if (data.buildings) {
+        setBuildings(data.buildings);
       }
     } catch (err) {
-      console.error("Failed to persist admin state:", err);
+      console.error("Failed to fetch buildings:", err);
+    } finally {
+      setLoading(false);
     }
-  }, [buildings, meta, loaded]);
+  }, []);
+
+  useEffect(() => { fetchBuildings(); }, [fetchBuildings]);
+
+  // ── API Helpers ──────────────────────────────────────────
+
+  const hostelId = () => localStorage.getItem("hostelIn_activeHostel") || "";
+
+  const apiAddBuilding = async (name: string, gender: string): Promise<MockBuilding | null> => {
+    try {
+      const res = await fetch("/api/hostel/buildings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hostelId: hostelId(), name, gender }),
+      });
+      const data = await res.json();
+      if (data.building) {
+        setBuildings((prev) => [...prev, data.building]);
+        return data.building;
+      }
+    } catch (err) { console.error(err); }
+    return null;
+  };
+
+  const apiEditBuilding = async (buildingId: string, name: string, gender: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/hostel/buildings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ buildingId, name, gender }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBuildings((prev) => prev.map((b) => b.id === buildingId ? { ...b, name, gender: gender as MockBuilding["gender"] } : b));
+        return true;
+      }
+    } catch (err) { console.error(err); }
+    return false;
+  };
+
+  const apiDeleteBuilding = async (buildingId: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/hostel/buildings", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ buildingId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBuildings((prev) => prev.filter((b) => b.id !== buildingId));
+        return true;
+      }
+    } catch (err) { console.error(err); }
+    return false;
+  };
+
+  const apiAddFloor = async (buildingId: string, floorNumber: number): Promise<MockFloor | null> => {
+    try {
+      const res = await fetch("/api/hostel/floors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ buildingId, floorNumber }),
+      });
+      const data = await res.json();
+      if (data.floor) {
+        setBuildings((prev) => prev.map((b) => b.id === buildingId ? { ...b, floors: [...b.floors, data.floor] } : b));
+        return data.floor;
+      }
+    } catch (err) { console.error(err); }
+    return null;
+  };
+
+  const apiEditFloor = async (floorId: string, floorNumber: number): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/hostel/floors", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ floorId, floorNumber }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBuildings((prev) => prev.map((b) => ({
+          ...b,
+          floors: b.floors.map((f) => f.id === floorId ? { ...f, floorNumber } : f),
+        })));
+        return true;
+      }
+    } catch (err) { console.error(err); }
+    return false;
+  };
+
+  const apiDeleteFloor = async (floorId: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/hostel/floors", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ floorId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBuildings((prev) => prev.map((b) => ({
+          ...b,
+          floors: b.floors.filter((f) => f.id !== floorId),
+        })));
+        return true;
+      }
+    } catch (err) { console.error(err); }
+    return false;
+  };
+
+  const apiAddRoom = async (floorId: string, roomNumber: string, bedCount: number): Promise<MockRoom | null> => {
+    try {
+      const res = await fetch("/api/hostel/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ floorId, roomNumber, bedCount }),
+      });
+      const data = await res.json();
+      if (data.room) {
+        setBuildings((prev) => prev.map((b) => ({
+          ...b,
+          floors: b.floors.map((f) => f.id === floorId ? { ...f, rooms: [...f.rooms, data.room] } : f),
+        })));
+        return data.room;
+      }
+    } catch (err) { console.error(err); }
+    return null;
+  };
+
+  const apiEditRoom = async (roomId: string, roomNumber: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/hostel/rooms", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId, roomNumber }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBuildings((prev) => prev.map((b) => ({
+          ...b,
+          floors: b.floors.map((f) => ({
+            ...f,
+            rooms: f.rooms.map((r) => r.id === roomId ? { ...r, roomNumber } : r),
+          })),
+        })));
+        return true;
+      }
+    } catch (err) { console.error(err); }
+    return false;
+  };
+
+  const apiDeleteRoom = async (roomId: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/hostel/rooms", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBuildings((prev) => prev.map((b) => ({
+          ...b,
+          floors: b.floors.map((f) => ({
+            ...f,
+            rooms: f.rooms.filter((r) => r.id !== roomId),
+          })),
+        })));
+        return true;
+      }
+    } catch (err) { console.error(err); }
+    return false;
+  };
+
+  const apiAddBed = async (roomId: string): Promise<MockBed | null> => {
+    try {
+      const res = await fetch("/api/hostel/beds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId }),
+      });
+      const data = await res.json();
+      if (data.bed) {
+        setBuildings((prev) => prev.map((b) => ({
+          ...b,
+          floors: b.floors.map((f) => ({
+            ...f,
+            rooms: f.rooms.map((r) => r.id === roomId ? { ...r, beds: [...r.beds, data.bed] } : r),
+          })),
+        })));
+        return data.bed;
+      }
+    } catch (err) { console.error(err); }
+    return null;
+  };
+
+  const apiToggleBed = async (bedId: string, isOccupied: boolean, occupantName?: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/hostel/beds", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bedId, isOccupied, occupantName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const today = isOccupied
+          ? new Date().toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })
+          : undefined;
+        setBuildings((prev) => prev.map((b) => ({
+          ...b,
+          floors: b.floors.map((f) => ({
+            ...f,
+            rooms: f.rooms.map((r) => ({
+              ...r,
+              beds: r.beds.map((bd) =>
+                bd.id === bedId ? { ...bd, isOccupied, occupantName: isOccupied ? (occupantName || "Occupied") : undefined, occupiedDate: today } : bd
+              ),
+            })),
+          })),
+        })));
+        return true;
+      }
+    } catch (err) { console.error(err); }
+    return false;
+  };
+
+  const apiDeleteBed = async (bedId: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/hostel/beds", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bedId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBuildings((prev) => prev.map((b) => ({
+          ...b,
+          floors: b.floors.map((f) => ({
+            ...f,
+            rooms: f.rooms.map((r) => ({
+              ...r,
+              beds: r.beds.filter((bd) => bd.id !== bedId),
+            })),
+          })),
+        })));
+        return true;
+      }
+    } catch (err) { console.error(err); }
+    return false;
+  };
 
   return (
-    <AdminDataContext.Provider value={{ buildings, setBuildings, meta, setMeta }}>
+    <AdminDataContext.Provider
+      value={{
+        buildings, setBuildings, meta, setMeta, loading,
+        refetch: fetchBuildings,
+        apiAddBuilding, apiEditBuilding, apiDeleteBuilding,
+        apiAddFloor, apiEditFloor, apiDeleteFloor,
+        apiAddRoom, apiEditRoom, apiDeleteRoom,
+        apiAddBed, apiToggleBed, apiDeleteBed,
+      }}
+    >
       {children}
     </AdminDataContext.Provider>
   );

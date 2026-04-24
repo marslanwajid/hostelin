@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 import { IconBed, IconCheck, IconX, IconSearch, IconBuilding, IconPlus, IconTrash, IconLayers } from "@/components/icons";
 import Swal from "sweetalert2";
-import { useAdminData, uid } from "../AdminDataContext";
+import { useAdminData } from "../AdminDataContext";
 
 export default function BedsManagement() {
-  const { buildings, setBuildings } = useAdminData();
+  const { buildings, apiToggleBed, apiDeleteBed, apiAddBed } = useAdminData();
   const [search, setSearch] = useState("");
 
   // Flatten all beds with parent info for searching/filtering
@@ -51,67 +51,48 @@ export default function BedsManagement() {
         icon: "warning", 
         showCancelButton: true, 
         confirmButtonColor: "#C0392B" 
-      }).then(r => {
+      }).then(async r => {
         if (!r.isConfirmed) return;
-        updateBed(bed.buildingId, bed.floorId, bed.roomId, bed.id, false, undefined);
+        await apiToggleBed(bed.id, false);
         Swal.fire("Vacated!", "Bed is now available.", "success");
       });
     } else {
-      // Instantly mark as occupied — no name prompt needed
-      updateBed(bed.buildingId, bed.floorId, bed.roomId, bed.id, true, "Occupied");
+      apiToggleBed(bed.id, true, "Occupied");
     }
   };
 
-  const updateBed = (bId: string, fId: string, rId: string, bedId: string, isOccupied: boolean, name?: string) => {
-    const today = isOccupied ? new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : undefined;
-    setBuildings(prev => prev.map(b => b.id !== bId ? b : {
-      ...b, floors: b.floors.map(f => f.id !== fId ? f : {
-        ...f, rooms: f.rooms.map(r => r.id !== rId ? r : {
-          ...r, beds: r.beds.map(bd => bd.id !== bedId ? bd : { ...bd, isOccupied, occupantName: name, occupiedDate: today })
-        })
-      })
-    }));
-  };
-
   const deleteBed = (bed: typeof allBeds[0]) => {
-    Swal.fire({ title: "Delete Bed?", icon: "warning", showCancelButton: true, confirmButtonColor: "#dc2626" }).then(r => {
+    Swal.fire({ title: "Delete Bed?", icon: "warning", showCancelButton: true, confirmButtonColor: "#dc2626" }).then(async r => {
       if (!r.isConfirmed) return;
-      setBuildings(prev => prev.map(b => b.id !== bed.buildingId ? b : {
-        ...b, floors: b.floors.map(f => f.id !== bed.floorId ? f : {
-          ...f, rooms: f.rooms.map(rm => rm.id !== bed.roomId ? rm : { ...rm, beds: rm.beds.filter(bd => bd.id !== bed.id) })
-        })
-      }));
+      await apiDeleteBed(bed.id);
     });
   };
 
   const addBed = () => {
+    // Build a flat list of all rooms for selection
+    const roomOptions = buildings.flatMap(b =>
+      b.floors.flatMap(f =>
+        f.rooms.map(r => ({ roomId: r.id, label: `${b.name} → Floor ${f.floorNumber} → Room ${r.roomNumber}` }))
+      )
+    );
     Swal.fire({
       title: "Add New Bed",
       html: `
         <div style="text-align:left">
-          <label style="display:block;margin-bottom:8px;font-weight:600">Select Building</label>
-          <select id="swal-building" class="swal2-input" style="margin:0;width:100%">
-            ${buildings.map(b => `<option value="${b.id}">${b.name}</option>`).join("")}
+          <label style="display:block;margin-bottom:8px;font-weight:600">Select Room</label>
+          <select id="swal-room" class="swal2-input" style="margin:0;width:100%">
+            ${roomOptions.map(r => `<option value="${r.roomId}">${r.label}</option>`).join("")}
           </select>
-          <label style="display:block;margin-top:16px;margin-bottom:8px;font-weight:600">Room Number</label>
-          <input id="swal-room" type="text" class="swal2-input" style="margin:0;width:100%" placeholder="e.g. 101">
         </div>`,
       showCancelButton: true, confirmButtonColor: "#C0392B",
       preConfirm: () => {
-        const bid = (document.getElementById("swal-building") as HTMLSelectElement).value;
-        const room = (document.getElementById("swal-room") as HTMLInputElement).value;
-        if (!room) { Swal.showValidationMessage("Room number is required"); return; }
-        return { bid, room };
+        const roomId = (document.getElementById("swal-room") as HTMLSelectElement).value;
+        if (!roomId) { Swal.showValidationMessage("Room is required"); return; }
+        return { roomId };
       }
-    }).then(r => {
+    }).then(async r => {
       if (!r.isConfirmed) return;
-      setBuildings(prev => prev.map(b => b.id !== r.value.bid ? b : {
-        ...b, floors: b.floors.map(f => ({
-          ...f, rooms: f.rooms.map(rm => rm.roomNumber !== r.value.room ? rm : {
-            ...rm, beds: [...rm.beds, { id: uid("bed"), isOccupied: false }]
-          })
-        }))
-      }));
+      await apiAddBed(r.value.roomId);
       Swal.fire("Added!", "New bed has been added to the room.", "success");
     });
   };

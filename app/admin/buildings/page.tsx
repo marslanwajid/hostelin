@@ -16,8 +16,6 @@ import {
 } from "@/components/icons";
 import {
   useAdminData,
-  uid,
-  makeBeds,
   countRooms,
   countBeds,
   countOccupied,
@@ -34,8 +32,10 @@ import {
    MAIN COMPONENT
    ============================================================ */
 
+const uid = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
 export default function BuildingsManagement() {
-  const { buildings, setBuildings } = useAdminData();
+  const { buildings, setBuildings, apiAddBuilding, apiDeleteBuilding, apiAddFloor, apiDeleteFloor, apiAddRoom, apiDeleteRoom, apiAddBed, apiDeleteBed, apiToggleBed } = useAdminData();
 
   // Collapse state — default collapsed (empty = collapsed, toggled entries = open)
   const [openBuildings, setOpenBuildings] = useState<Record<string, boolean>>({});
@@ -115,45 +115,10 @@ export default function BuildingsManagement() {
     );
 
   /* ---------- BED HANDLERS ---------- */
-  const updateBed = (
-    buildingId: string,
-    floorId: string,
-    roomId: string,
-    bedId: string,
-    isOccupied: boolean,
-    occupantName?: string
-  ) =>
-    setBuildings((prev) =>
-      prev.map((b) =>
-        b.id !== buildingId
-          ? b
-          : {
-              ...b,
-              floors: b.floors.map((f) =>
-                f.id !== floorId
-                  ? f
-                  : {
-                      ...f,
-                      rooms: f.rooms.map((r) =>
-                        r.id !== roomId
-                          ? r
-                          : {
-                              ...r,
-                              beds: r.beds.map((bd) =>
-                                bd.id !== bedId ? bd : { ...bd, isOccupied, occupantName }
-                              ),
-                            }
-                      ),
-                    }
-              ),
-            }
-      )
-    );
-
   const toggleBed = (
-    buildingId: string,
-    floorId: string,
-    roomId: string,
+    _buildingId: string,
+    _floorId: string,
+    _roomId: string,
     bed: MockBed
   ) => {
     if (bed.isOccupied) {
@@ -167,42 +132,18 @@ export default function BuildingsManagement() {
         confirmButtonText: "Yes, Vacate",
       }).then((r) => {
         if (r.isConfirmed) {
-          updateBed(buildingId, floorId, roomId, bed.id, false, undefined);
+          apiToggleBed(bed.id, false);
         }
       });
     } else {
-      // Instantly mark as occupied — no name prompt needed
-      updateBed(buildingId, floorId, roomId, bed.id, true, "Occupied");
+      apiToggleBed(bed.id, true, "Occupied");
     }
   };
 
-  const addBed = (buildingId: string, floorId: string, roomId: string) =>
-    setBuildings((prev) =>
-      prev.map((b) =>
-        b.id !== buildingId
-          ? b
-          : {
-              ...b,
-              floors: b.floors.map((f) =>
-                f.id !== floorId
-                  ? f
-                  : {
-                      ...f,
-                      rooms: f.rooms.map((r) =>
-                        r.id !== roomId
-                          ? r
-                          : {
-                              ...r,
-                              beds: [...r.beds, { id: uid("bed"), isOccupied: false }],
-                            }
-                      ),
-                    }
-              ),
-            }
-      )
-    );
+  const addBed = (_buildingId: string, _floorId: string, roomId: string) =>
+    apiAddBed(roomId);
 
-  const removeBed = (buildingId: string, floorId: string, roomId: string, bedId: string) =>
+  const removeBed = (_buildingId: string, _floorId: string, _roomId: string, bedId: string) =>
     Swal.fire({
       title: "Remove Bed?",
       text: "This will delete the bed from the room.",
@@ -212,50 +153,17 @@ export default function BuildingsManagement() {
       confirmButtonText: "Yes, remove",
     }).then((r) => {
       if (!r.isConfirmed) return;
-      setBuildings((prev) =>
-        prev.map((b) =>
-          b.id !== buildingId
-            ? b
-            : {
-                ...b,
-                floors: b.floors.map((f) =>
-                  f.id !== floorId
-                    ? f
-                    : {
-                        ...f,
-                        rooms: f.rooms.map((r) =>
-                          r.id !== roomId
-                            ? r
-                            : { ...r, beds: r.beds.filter((bd) => bd.id !== bedId) }
-                        ),
-                      }
-                ),
-              }
-        )
-      );
+      apiDeleteBed(bedId);
     });
 
   /* ---------- ROOM / FLOOR / BUILDING ADD + REMOVE ---------- */
-  const addFloor = (buildingId: string) =>
-    setBuildings((prev) =>
-      prev.map((b) =>
-        b.id !== buildingId
-          ? b
-          : {
-              ...b,
-              floors: [
-                ...b.floors,
-                {
-                  id: uid("fl"),
-                  floorNumber: (b.floors[b.floors.length - 1]?.floorNumber || 0) + 1,
-                  rooms: [],
-                },
-              ],
-            }
-      )
-    );
+  const addFloor = (buildingId: string) => {
+    const b = buildings.find((x) => x.id === buildingId);
+    const nextFloor = (b?.floors[b.floors.length - 1]?.floorNumber || 0) + 1;
+    apiAddFloor(buildingId, nextFloor);
+  };
 
-  const removeFloor = (buildingId: string, floorId: string) =>
+  const removeFloor = (_buildingId: string, floorId: string) =>
     Swal.fire({
       title: "Remove Floor?",
       text: "All rooms & beds on this floor will be deleted.",
@@ -265,14 +173,10 @@ export default function BuildingsManagement() {
       confirmButtonText: "Yes, remove",
     }).then((r) => {
       if (!r.isConfirmed) return;
-      setBuildings((prev) =>
-        prev.map((b) =>
-          b.id !== buildingId ? b : { ...b, floors: b.floors.filter((f) => f.id !== floorId) }
-        )
-      );
+      apiDeleteFloor(floorId);
     });
 
-  const addRoom = (buildingId: string, floorId: string) =>
+  const addRoom = (_buildingId: string, floorId: string) =>
     Swal.fire({
       title: "Add Room",
       input: "text",
@@ -296,35 +200,11 @@ export default function BuildingsManagement() {
       }).then((r2) => {
         if (!r2.isConfirmed) return;
         const bedCount = Math.max(1, parseInt(String(r2.value || "1"), 10));
-        setBuildings((prev) =>
-          prev.map((b) =>
-            b.id !== buildingId
-              ? b
-              : {
-                  ...b,
-                  floors: b.floors.map((f) =>
-                    f.id !== floorId
-                      ? f
-                      : {
-                          ...f,
-                          rooms: [
-                            ...f.rooms,
-                            {
-                              id: uid("rm"),
-                              roomNumber: String(result.value),
-                              beds: makeBeds(bedCount),
-                              images: [],
-                            },
-                          ],
-                        }
-                  ),
-                }
-          )
-        );
+        apiAddRoom(floorId, String(result.value), bedCount);
       });
     });
 
-  const removeRoom = (buildingId: string, floorId: string, roomId: string) =>
+  const removeRoom = (_buildingId: string, _floorId: string, roomId: string) =>
     Swal.fire({
       title: "Remove Room?",
       text: "This will delete the room and its beds.",
@@ -334,18 +214,7 @@ export default function BuildingsManagement() {
       confirmButtonText: "Yes, remove",
     }).then((r) => {
       if (!r.isConfirmed) return;
-      setBuildings((prev) =>
-        prev.map((b) =>
-          b.id !== buildingId
-            ? b
-            : {
-                ...b,
-                floors: b.floors.map((f) =>
-                  f.id !== floorId ? f : { ...f, rooms: f.rooms.filter((r2) => r2.id !== roomId) }
-                ),
-              }
-        )
-      );
+      apiDeleteRoom(roomId);
     });
 
   const addBuilding = () =>
@@ -368,17 +237,10 @@ export default function BuildingsManagement() {
         showCancelButton: true,
         confirmButtonColor: "#C0392B",
         confirmButtonText: "Create",
-      }).then((r2) => {
+      }).then(async (r2) => {
         if (!r2.isConfirmed) return;
-        const newB: MockBuilding = {
-          id: uid("bld"),
-          name: String(r1.value),
-          gender: (r2.value as MockBuilding["gender"]) || "Boys",
-          images: [],
-          floors: [],
-        };
-        setBuildings((prev) => [...prev, newB]);
-        setOpenBuildings((p) => ({ ...p, [newB.id]: true }));
+        const newB = await apiAddBuilding(String(r1.value), r2.value || "Boys");
+        if (newB) setOpenBuildings((p) => ({ ...p, [newB.id]: true }));
       });
     });
 
@@ -392,7 +254,7 @@ export default function BuildingsManagement() {
       confirmButtonText: "Yes, delete",
     }).then((r) => {
       if (!r.isConfirmed) return;
-      setBuildings((prev) => prev.filter((b) => b.id !== buildingId));
+      apiDeleteBuilding(buildingId);
     });
 
   /* ============================================================

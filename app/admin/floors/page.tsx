@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 import { IconLayers, IconBuilding, IconTrash, IconPlus, IconChevronDown, IconChevronUp, IconHash, IconBed } from "@/components/icons";
 import Swal from "sweetalert2";
-import { useAdminData, uid, makeBeds } from "../AdminDataContext";
+import { useAdminData } from "../AdminDataContext";
 
 export default function FloorsManagement() {
-  const { buildings, setBuildings } = useAdminData();
+  const { buildings, apiAddFloor, apiEditFloor, apiDeleteFloor, apiAddRoom } = useAdminData();
   const [expandedFloors, setExpandedFloors] = useState<string[]>([]);
 
   const toggleExpand = (id: string) => {
@@ -16,7 +16,6 @@ export default function FloorsManagement() {
   const allFloors = buildings.flatMap(b => b.floors.map(f => ({ ...f, buildingId: b.id, buildingName: b.name })));
 
   const addFloor = () => {
-    const opts = Object.fromEntries(buildings.map(b => [b.id, b.name]));
     Swal.fire({
       title: "Add New Floor",
       html: `
@@ -35,45 +34,36 @@ export default function FloorsManagement() {
         if (!num) Swal.showValidationMessage("Floor number is required");
         return { bid, num: parseInt(num) };
       }
-    }).then(r => {
+    }).then(async r => {
       if (!r.isConfirmed) return;
-      setBuildings(prev => prev.map(b => b.id !== r.value.bid ? b : {
-        ...b,
-        floors: [...b.floors, { id: uid("fl"), floorNumber: r.value.num, rooms: [] }]
-      }));
+      await apiAddFloor(r.value.bid, r.value.num);
       Swal.fire("Added!", "Floor has been created.", "success");
     });
   };
 
-  const editFloor = (buildingId: string, floorId: string, currentNum: number) => {
+  const editFloor = (floorId: string, currentNum: number) => {
     Swal.fire({
       title: "Edit Floor Number", input: "number", inputValue: currentNum,
       showCancelButton: true, confirmButtonColor: "#C0392B",
-    }).then(r => {
+    }).then(async r => {
       if (!r.isConfirmed) return;
-      setBuildings(prev => prev.map(b => b.id !== buildingId ? b : {
-        ...b, floors: b.floors.map(f => f.id !== floorId ? f : { ...f, floorNumber: parseInt(r.value) })
-      }));
+      await apiEditFloor(floorId, parseInt(r.value));
     });
   };
 
-  const removeFloor = (buildingId: string, floorId: string) => {
-    Swal.fire({ title: "Remove Floor?", text: "All rooms on this floor will be deleted.", icon: "warning", showCancelButton: true, confirmButtonColor: "#C0392B" }).then(r => {
+  const removeFloor = (floorId: string) => {
+    Swal.fire({ title: "Remove Floor?", text: "All rooms on this floor will be deleted.", icon: "warning", showCancelButton: true, confirmButtonColor: "#C0392B" }).then(async r => {
       if (!r.isConfirmed) return;
-      setBuildings(prev => prev.map(b => b.id !== buildingId ? b : { ...b, floors: b.floors.filter(f => f.id !== floorId) }));
+      await apiDeleteFloor(floorId);
     });
   };
 
-  const addRoomToFloor = (buildingId: string, floorId: string) => {
+  const addRoomToFloor = (floorId: string) => {
     Swal.fire({ title: "Room Number", input: "text", inputPlaceholder: "e.g. 104", showCancelButton: true, confirmButtonColor: "#C0392B", inputValidator: v => !v ? "Required" : null }).then(r1 => {
       if (!r1.isConfirmed) return;
-      Swal.fire({ title: "Beds", input: "number", inputValue: "2", showCancelButton: true, confirmButtonColor: "#C0392B" }).then(r2 => {
+      Swal.fire({ title: "Beds", input: "number", inputValue: "2", showCancelButton: true, confirmButtonColor: "#C0392B" }).then(async r2 => {
         if (!r2.isConfirmed) return;
-        setBuildings(prev => prev.map(b => b.id !== buildingId ? b : {
-          ...b, floors: b.floors.map(f => f.id !== floorId ? f : {
-            ...f, rooms: [...f.rooms, { id: uid("rm"), roomNumber: r1.value, beds: makeBeds(parseInt(r2.value) || 2), images: [] }]
-          })
-        }));
+        await apiAddRoom(floorId, r1.value, parseInt(r2.value) || 2);
         Swal.fire("Added!", "Room created.", "success");
       });
     });
@@ -103,8 +93,8 @@ export default function FloorsManagement() {
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <button onClick={e => { e.stopPropagation(); editFloor(f.buildingId, f.id, f.floorNumber); }} className="wizard-btn wizard-btn-back" style={{ padding: "8px 12px", fontSize: 12 }}>Edit</button>
-                  <button onClick={e => { e.stopPropagation(); removeFloor(f.buildingId, f.id); }} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #fecaca", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "white" }}><IconTrash size={16} /></button>
+                  <button onClick={e => { e.stopPropagation(); editFloor(f.id, f.floorNumber); }} className="wizard-btn wizard-btn-back" style={{ padding: "8px 12px", fontSize: 12 }}>Edit</button>
+                  <button onClick={e => { e.stopPropagation(); removeFloor(f.id); }} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #fecaca", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "white" }}><IconTrash size={16} /></button>
                   <div style={{ color: "#999", marginLeft: 8 }}>{isExpanded ? <IconChevronUp size={20} /> : <IconChevronDown size={20} />}</div>
                 </div>
               </div>
@@ -117,7 +107,7 @@ export default function FloorsManagement() {
                         <div style={{ fontSize: 12, fontWeight: 600, color: "#888", display: "flex", alignItems: "center", gap: 4 }}><IconBed size={14} /> {room.beds.length}</div>
                       </div>
                     ))}
-                    <button onClick={() => addRoomToFloor(f.buildingId, f.id)} style={{ border: "1.5px dashed #ccc", borderRadius: 10, padding: "12px", background: "none", color: "#999", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><IconPlus size={14} /> Add Room</button>
+                    <button onClick={() => addRoomToFloor(f.id)} style={{ border: "1.5px dashed #ccc", borderRadius: 10, padding: "12px", background: "none", color: "#999", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><IconPlus size={14} /> Add Room</button>
                   </div>
                 </div>
               )}

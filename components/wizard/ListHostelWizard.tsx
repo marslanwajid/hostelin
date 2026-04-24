@@ -107,34 +107,49 @@ export default function ListHostelWizard({ tweaks }: Props) {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     try {
-      const existing = JSON.parse(localStorage.getItem('hostelIn_listings') || '[]');
-      const hostelId = uid('hostel');
-      const serializableData = {
-        ...data,
-        registrationCertificate: data.registrationCertificateName,
-        hostelImages: data.hostelImages.map(i => ({ ...i, file: undefined, preview: i.preview })),
-        roomImages: Object.fromEntries(
-          Object.entries(data.roomImages).map(([k, v]) => [k, v.map(i => ({ ...i, file: undefined, preview: i.preview }))])
-        ),
-        createdAt: new Date().toISOString(),
-        id: hostelId,
-      };
-      existing.push(serializableData);
-      localStorage.setItem('hostelIn_listings', JSON.stringify(existing));
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hostelName: data.hostelName,
+          city: data.city,
+          town: data.town,
+          registrationNumber: data.registrationNumber,
+          fullAddress: data.fullAddress,
+          adminFullName: data.adminFullName,
+          adminEmail: data.adminEmail,
+          adminPassword: data.adminPassword,
+          buildings: data.buildings,
+          rooms: data.rooms,
+        }),
+      });
 
-      // Auto-login: set auth and active hostel so user can go straight to dashboard
-      localStorage.setItem('hostelIn_auth', 'true');
-      localStorage.setItem('hostelIn_activeHostel', hostelId);
-      // Clear any stale admin data so fresh transform happens
-      localStorage.removeItem('hostelIn_adminData');
-      // Clear the draft
-      localStorage.removeItem('hostelIn_draft');
+      const result = await res.json();
+
+      if (result.success) {
+        // Auto-login: set auth and active hostel
+        localStorage.setItem('hostelIn_auth', 'true');
+        localStorage.setItem('hostelIn_activeHostel', result.hostelId);
+        localStorage.setItem('hostelIn_meta', JSON.stringify({
+          hostelName: result.hostelName,
+          city: data.city,
+          town: data.town || '',
+          adminFullName: result.adminFullName,
+          adminEmail: result.adminEmail,
+          hostelId: result.hostelId,
+        }));
+        // Clear the draft
+        localStorage.removeItem('hostelIn_draft');
+        setSubmitted(true);
+      } else {
+        alert(result.error || 'Registration failed. Please try again.');
+      }
     } catch (e) {
-      console.error('Failed to save listing:', e);
+      console.error('Failed to register hostel:', e);
+      alert('Connection error. Please make sure the server is running.');
     }
-    setSubmitted(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

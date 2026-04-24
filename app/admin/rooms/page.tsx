@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 import { IconHash, IconBuilding, IconLayers, IconBed, IconTrash, IconPlus, IconChevronDown, IconChevronUp, IconCheck, IconX } from "@/components/icons";
 import Swal from "sweetalert2";
-import { useAdminData, uid, makeBeds } from "../AdminDataContext";
+import { useAdminData } from "../AdminDataContext";
 
 export default function RoomsManagement() {
-  const { buildings, setBuildings } = useAdminData();
+  const { buildings, apiAddFloor, apiAddRoom, apiEditRoom, apiDeleteRoom, apiAddBed } = useAdminData();
   const [expandedRooms, setExpandedRooms] = useState<string[]>([]);
 
   const toggleExpand = (id: string) => {
@@ -43,48 +43,38 @@ export default function RoomsManagement() {
         if (!roomNum || !floorNum) { Swal.showValidationMessage("All fields required"); return; }
         return { bid, floorNum, roomNum, bedCount };
       }
-    }).then(r => {
+    }).then(async r => {
       if (!r.isConfirmed) return;
       const { bid, floorNum, roomNum, bedCount } = r.value;
-      setBuildings(prev => prev.map(b => {
-        if (b.id !== bid) return b;
-        const floorExists = b.floors.find(f => f.floorNumber === floorNum);
-        if (floorExists) {
-          return { ...b, floors: b.floors.map(f => f.floorNumber !== floorNum ? f : { ...f, rooms: [...f.rooms, { id: uid("rm"), roomNumber: roomNum, beds: makeBeds(bedCount), images: [] }] }) };
-        } else {
-          return { ...b, floors: [...b.floors, { id: uid("fl"), floorNumber: floorNum, rooms: [{ id: uid("rm"), roomNumber: roomNum, beds: makeBeds(bedCount), images: [] }] }] };
-        }
-      }));
+      // Find existing floor or create one
+      const building = buildings.find(b => b.id === bid);
+      let floor = building?.floors.find(f => f.floorNumber === floorNum) || null;
+      if (!floor) {
+        floor = await apiAddFloor(bid, floorNum);
+      }
+      if (floor) {
+        await apiAddRoom(floor.id, roomNum, bedCount);
+      }
       Swal.fire("Created!", "Room added.", "success");
     });
   };
 
-  const editRoom = (buildingId: string, floorId: string, roomId: string, currentNum: string) => {
-    Swal.fire({ title: "Edit Room Number", input: "text", inputValue: currentNum, showCancelButton: true, confirmButtonColor: "#C0392B" }).then(r => {
+  const editRoom = (roomId: string, currentNum: string) => {
+    Swal.fire({ title: "Edit Room Number", input: "text", inputValue: currentNum, showCancelButton: true, confirmButtonColor: "#C0392B" }).then(async r => {
       if (!r.isConfirmed || !r.value) return;
-      setBuildings(prev => prev.map(b => b.id !== buildingId ? b : {
-        ...b, floors: b.floors.map(f => f.id !== floorId ? f : {
-          ...f, rooms: f.rooms.map(rm => rm.id !== roomId ? rm : { ...rm, roomNumber: r.value })
-        })
-      }));
+      await apiEditRoom(roomId, r.value);
     });
   };
 
-  const removeRoom = (buildingId: string, floorId: string, roomId: string) => {
-    Swal.fire({ title: "Delete Room?", icon: "warning", showCancelButton: true, confirmButtonColor: "#dc2626" }).then(r => {
+  const removeRoom = (roomId: string) => {
+    Swal.fire({ title: "Delete Room?", icon: "warning", showCancelButton: true, confirmButtonColor: "#dc2626" }).then(async r => {
       if (!r.isConfirmed) return;
-      setBuildings(prev => prev.map(b => b.id !== buildingId ? b : {
-        ...b, floors: b.floors.map(f => f.id !== floorId ? f : { ...f, rooms: f.rooms.filter(rm => rm.id !== roomId) })
-      }));
+      await apiDeleteRoom(roomId);
     });
   };
 
-  const addBedToRoom = (buildingId: string, floorId: string, roomId: string) => {
-    setBuildings(prev => prev.map(b => b.id !== buildingId ? b : {
-      ...b, floors: b.floors.map(f => f.id !== floorId ? f : {
-        ...f, rooms: f.rooms.map(rm => rm.id !== roomId ? rm : { ...rm, beds: [...rm.beds, { id: uid("bed"), isOccupied: false }] })
-      })
-    }));
+  const addBedToRoom = (roomId: string) => {
+    apiAddBed(roomId);
   };
 
   return (
@@ -119,8 +109,8 @@ export default function RoomsManagement() {
                     <div style={{ fontSize: 13, fontWeight: 700, color: "#2C2C2C" }}>{occupiedCount}/{room.beds.length}</div>
                     <div style={{ fontSize: 11, color: "#888" }}>Occupied</div>
                   </div>
-                  <button onClick={e => { e.stopPropagation(); editRoom(room.buildingId, room.floorId, room.id, room.roomNumber); }} className="wizard-btn wizard-btn-back" style={{ padding: "8px 12px", fontSize: 12 }}>Edit</button>
-                  <button onClick={e => { e.stopPropagation(); removeRoom(room.buildingId, room.floorId, room.id); }} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #fecaca", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "white" }}><IconTrash size={16} /></button>
+                  <button onClick={e => { e.stopPropagation(); editRoom(room.id, room.roomNumber); }} className="wizard-btn wizard-btn-back" style={{ padding: "8px 12px", fontSize: 12 }}>Edit</button>
+                  <button onClick={e => { e.stopPropagation(); removeRoom(room.id); }} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #fecaca", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "white" }}><IconTrash size={16} /></button>
                   <div style={{ color: "#999", marginLeft: 8 }}>{isExpanded ? <IconChevronUp size={20} /> : <IconChevronDown size={20} />}</div>
                 </div>
               </div>
@@ -135,7 +125,7 @@ export default function RoomsManagement() {
                         <span style={{ fontSize: 13, fontWeight: 700, color: "#2C2C2C" }}>Bed {idx + 1}</span>
                       </div>
                     ))}
-                    <button onClick={() => addBedToRoom(room.buildingId, room.floorId, room.id)} style={{ border: "1.5px dashed #ccc", borderRadius: 10, padding: "10px 16px", background: "none", color: "#999", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}><IconPlus size={14} /> Add Bed</button>
+                    <button onClick={() => addBedToRoom(room.id)} style={{ border: "1.5px dashed #ccc", borderRadius: 10, padding: "10px 16px", background: "none", color: "#999", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}><IconPlus size={14} /> Add Bed</button>
                   </div>
                 </div>
               )}

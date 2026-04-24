@@ -21,42 +21,41 @@ export default function SignInPage() {
     document.documentElement.style.setProperty('--wizard-red-rgb', `${r}, ${g}, ${b}`);
   }, []);
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    setTimeout(() => {
-      try {
-        // Read all saved hostel listings
-        const listingsRaw = localStorage.getItem('hostelIn_listings');
-        const listings = listingsRaw ? JSON.parse(listingsRaw) : [];
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-        // Find a listing whose adminEmail and adminPassword match
-        const matched = listings.find(
-          (l: { adminEmail: string; adminPassword: string }) =>
-            l.adminEmail.toLowerCase() === email.toLowerCase() && l.adminPassword === password
-        );
+      const data = await res.json();
 
-        if (matched) {
-          // Successful login — set auth and active hostel
-          localStorage.setItem('hostelIn_auth', 'true');
-          localStorage.setItem('hostelIn_activeHostel', matched.id);
-          // Clear any stale persisted admin data so fresh transform happens
-          localStorage.removeItem('hostelIn_adminData');
-          router.push('/admin');
-        } else if (listings.length === 0) {
-          setError('No hostel listings found. Please list your hostel first.');
-          setLoading(false);
-        } else {
-          setError('Invalid email or password. Please try again.');
-          setLoading(false);
-        }
-      } catch {
-        setError('Something went wrong. Please try again.');
+      if (data.success) {
+        // Store auth state and hostel info
+        localStorage.setItem('hostelIn_auth', 'true');
+        localStorage.setItem('hostelIn_activeHostel', data.hostelId);
+        localStorage.setItem('hostelIn_meta', JSON.stringify({
+          hostelName: data.hostelName,
+          city: data.city,
+          town: data.town || '',
+          adminFullName: data.adminFullName,
+          adminEmail: data.adminEmail,
+          hostelId: data.hostelId,
+        }));
+        router.push('/admin');
+      } else {
+        setError(data.error || 'Invalid credentials. Please try again.');
         setLoading(false);
       }
-    }, 1000);
+    } catch {
+      setError('Connection error. Make sure the server is running.');
+      setLoading(false);
+    }
   };
 
   return (
