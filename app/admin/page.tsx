@@ -5,13 +5,14 @@ import { IconBuilding, IconBed, IconUsers, IconHome, IconLayers, IconHash } from
 import { useAdminData, countRooms, countBeds, countOccupied } from "./AdminDataContext";
 
 export default function AdminOverview() {
-  const { buildings } = useAdminData();
+  const { buildings, meta } = useAdminData();
 
   const totalFloors = buildings.reduce((s, b) => s + b.floors.length, 0);
   const totalRooms = buildings.reduce((s, b) => s + countRooms(b), 0);
   const totalBeds = buildings.reduce((s, b) => s + countBeds(b), 0);
   const totalOccupied = buildings.reduce((s, b) => s + countOccupied(b), 0);
   const rate = totalBeds > 0 ? Math.round((totalOccupied / totalBeds) * 100) : 0;
+  const firstName = meta?.adminFullName?.split(" ")[0] || "Admin";
 
   const stats = [
     { label: "Buildings", value: buildings.length, icon: <IconBuilding size={24} />, color: "#C0392B", bg: "#fef2f2" },
@@ -26,7 +27,7 @@ export default function AdminOverview() {
     <div>
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontWeight: 800, fontSize: 24, color: "#2C2C2C", marginBottom: 8 }}>
-          Welcome back, Admin!
+          Welcome back, {firstName}!
         </h1>
         <p style={{ color: "#666", fontSize: 15 }}>Here is what's happening with your hostels today.</p>
       </div>

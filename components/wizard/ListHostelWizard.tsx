@@ -110,6 +110,7 @@ export default function ListHostelWizard({ tweaks }: Props) {
   const handleSubmit = () => {
     try {
       const existing = JSON.parse(localStorage.getItem('hostelIn_listings') || '[]');
+      const hostelId = uid('hostel');
       const serializableData = {
         ...data,
         registrationCertificate: data.registrationCertificateName,
@@ -118,10 +119,18 @@ export default function ListHostelWizard({ tweaks }: Props) {
           Object.entries(data.roomImages).map(([k, v]) => [k, v.map(i => ({ ...i, file: undefined, preview: i.preview }))])
         ),
         createdAt: new Date().toISOString(),
-        id: uid('hostel'),
+        id: hostelId,
       };
       existing.push(serializableData);
       localStorage.setItem('hostelIn_listings', JSON.stringify(existing));
+
+      // Auto-login: set auth and active hostel so user can go straight to dashboard
+      localStorage.setItem('hostelIn_auth', 'true');
+      localStorage.setItem('hostelIn_activeHostel', hostelId);
+      // Clear any stale admin data so fresh transform happens
+      localStorage.removeItem('hostelIn_adminData');
+      // Clear the draft
+      localStorage.removeItem('hostelIn_draft');
     } catch (e) {
       console.error('Failed to save listing:', e);
     }

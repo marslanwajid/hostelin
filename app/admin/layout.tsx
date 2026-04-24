@@ -3,14 +3,14 @@
 import React, { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { IconHome, IconBuilding, IconBed, IconLogOut, IconLayers, IconHash } from "@/components/icons";
-import { AdminDataProvider } from "./AdminDataContext";
+import { AdminDataProvider, useAdminData } from "./AdminDataContext";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { meta } = useAdminData();
 
   useEffect(() => {
-    // Basic mock auth check
     const isAuth = localStorage.getItem("hostelIn_auth");
     if (!isAuth) {
       router.push("/sign-in");
@@ -25,8 +25,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Beds", path: "/admin/beds", icon: <IconBed size={20} /> },
   ];
 
+  const displayName = meta?.adminFullName || "Hostel Admin";
+  const displayEmail = meta?.adminEmail || "admin@hostelin.pk";
+  const hostelName = meta?.hostelName || "Admin Dashboard";
+  const initials = displayName.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "A";
+
   return (
-    <AdminDataProvider>
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8f9fb", fontFamily: "var(--font-dm-sans), sans-serif" }}>
       {/* Sidebar */}
       <aside
@@ -46,7 +50,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <img src="/uploads/logo.webp" alt="HostelIn" style={{ height: "32px", cursor: "pointer" }} onClick={() => router.push("/")} />
         </div>
 
-        <nav style={{ flex: 1, padding: "24px 16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+        {/* Hostel Info Badge */}
+        {meta && (
+          <div style={{ padding: "16px 16px 0", marginBottom: 8 }}>
+            <div style={{ 
+              background: "linear-gradient(135deg, rgba(192,57,43,0.06), rgba(192,57,43,0.02))", 
+              borderRadius: 12, 
+              padding: "14px 16px",
+              border: "1px solid rgba(192,57,43,0.08)"
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#2C2C2C", marginBottom: 2 }}>{meta.hostelName}</div>
+              <div style={{ fontSize: 11, color: "#888", fontWeight: 600 }}>{meta.city}{meta.town ? `, ${meta.town}` : ""}</div>
+            </div>
+          </div>
+        )}
+
+        <nav style={{ flex: 1, padding: "12px 16px", display: "flex", flexDirection: "column", gap: "8px" }}>
           {navLinks.map((link) => {
             const isActive = pathname === link.path || (link.path !== "/admin" && pathname?.startsWith(link.path));
             return (
@@ -94,6 +113,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <button
             onClick={() => {
               localStorage.removeItem("hostelIn_auth");
+              localStorage.removeItem("hostelIn_activeHostel");
               router.push("/sign-in");
             }}
             style={{
@@ -144,12 +164,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           }}
         >
           <div style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontWeight: 700, fontSize: "18px", color: "#2C2C2C" }}>
-            Admin Dashboard
+            {hostelName}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "14px", fontWeight: 700, color: "#2C2C2C" }}>Hostel Admin</div>
-              <div style={{ fontSize: "12px", color: "#888" }}>admin@hostelin.pk</div>
+              <div style={{ fontSize: "14px", fontWeight: 700, color: "#2C2C2C" }}>{displayName}</div>
+              <div style={{ fontSize: "12px", color: "#888" }}>{displayEmail}</div>
             </div>
             <div
               style={{
@@ -165,7 +185,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 fontSize: "16px",
               }}
             >
-              A
+              {initials}
             </div>
           </div>
         </header>
@@ -174,6 +194,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div style={{ padding: "32px", flex: 1 }}>{children}</div>
       </main>
     </div>
+  );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <AdminDataProvider>
+      <AdminContent>{children}</AdminContent>
     </AdminDataProvider>
   );
 }

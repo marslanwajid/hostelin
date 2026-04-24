@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { IconCheck, IconHome, IconPlus } from '../icons';
+import { IconCheck, IconHome, IconPlus, IconBuilding } from '../icons';
 import { WizardData } from './types';
 
 interface Props {
@@ -24,13 +24,19 @@ export default function SuccessScreen({ data, red, onReset }: Props) {
         </div>
         <div className="wizard-success-title">Hostel Listed Successfully!</div>
         <p className="wizard-success-text">
-          Your hostel <strong>"{data.hostelName}"</strong> has been saved with {data.buildings.length} building{data.buildings.length !== 1 ? 's' : ''}, {totalRooms} room{totalRooms !== 1 ? 's' : ''}, and {totalBeds} bed{totalBeds !== 1 ? 's' : ''}.
+          Your hostel <strong>&quot;{data.hostelName}&quot;</strong> has been saved with {data.buildings.length} building{data.buildings.length !== 1 ? 's' : ''}, {totalRooms} room{totalRooms !== 1 ? 's' : ''}, and {totalBeds} bed{totalBeds !== 1 ? 's' : ''}.
+        </p>
+        <p style={{ fontSize: 14, color: '#666', marginBottom: 24 }}>
+          You can now manage your hostel from the admin dashboard. Sign in anytime using <strong>{data.adminEmail}</strong>.
         </p>
         <div className="wizard-success-btns">
           <button className="wizard-btn wizard-btn-outline" onClick={() => router.push('/')}>
             <IconHome size={16} /> Go Home
           </button>
-          <button className="wizard-btn" style={{ background: red, color: 'white', border: 'none' }} onClick={onReset}>
+          <button className="wizard-btn" style={{ background: red, color: 'white', border: 'none' }} onClick={() => router.push('/admin')}>
+            <IconBuilding size={16} /> Go to Dashboard
+          </button>
+          <button className="wizard-btn wizard-btn-outline" onClick={onReset}>
             <IconPlus size={16} /> List Another
           </button>
         </div>
@@ -38,5 +44,3 @@ export default function SuccessScreen({ data, red, onReset }: Props) {
     </div>
   );
 }
-
-

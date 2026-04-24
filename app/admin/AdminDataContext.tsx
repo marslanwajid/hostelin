@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 /* ============================================================
    SHARED TYPES
@@ -39,113 +39,164 @@ export interface MockBuilding {
   floors: MockFloor[];
 }
 
+export interface HostelMeta {
+  hostelName: string;
+  city: string;
+  town: string;
+  adminFullName: string;
+  adminEmail: string;
+  hostelId: string;
+  createdAt: string;
+}
+
 /* ============================================================
    HELPERS
    ============================================================ */
 
-export const uid = (p = "id") => `${p}_${Math.random().toString(36).slice(2, 9)}`;
+let _ctr = 0;
+export const uid = (p = "id") => `${p}_${Date.now()}_${++_ctr}`;
 
-export const makeBeds = (n: number, occupiedIdx: number[] = []): MockBed[] =>
-  Array.from({ length: n }, (_, i) => ({
+export const makeBeds = (n: number): MockBed[] =>
+  Array.from({ length: n }, () => ({
     id: uid("bed"),
-    isOccupied: occupiedIdx.includes(i),
-    occupantName: occupiedIdx.includes(i) ? "Occupant" : undefined,
+    isOccupied: false,
   }));
 
 /* ============================================================
-   INITIAL MOCK DATA
+   WIZARD → ADMIN DATA TRANSFORMER
    ============================================================ */
 
-const INITIAL_DATA: MockBuilding[] = [
-  {
-    id: "b1",
-    name: "Main Boys Hostel",
-    gender: "Boys",
-    images: [],
-    floors: [
-      {
-        id: "fl_b1_1",
-        floorNumber: 1,
-        rooms: [
-          { id: "rm_b1_101", roomNumber: "101", beds: [
-            { id: "bed_b1_101_1", isOccupied: true, occupantName: "Occupant" },
-            { id: "bed_b1_101_2", isOccupied: true, occupantName: "Occupant" },
-            { id: "bed_b1_101_3", isOccupied: false },
-          ], images: [] },
-          { id: "rm_b1_102", roomNumber: "102", beds: [
-            { id: "bed_b1_102_1", isOccupied: true, occupantName: "Occupant" },
-            { id: "bed_b1_102_2", isOccupied: false },
-          ], images: [] },
-          { id: "rm_b1_103", roomNumber: "103", beds: [
-            { id: "bed_b1_103_1", isOccupied: true, occupantName: "Occupant" },
-            { id: "bed_b1_103_2", isOccupied: true, occupantName: "Occupant" },
-            { id: "bed_b1_103_3", isOccupied: true, occupantName: "Occupant" },
-            { id: "bed_b1_103_4", isOccupied: false },
-          ], images: [] },
-        ],
-      },
-      {
-        id: "fl_b1_2",
-        floorNumber: 2,
-        rooms: [
-          { id: "rm_b1_201", roomNumber: "201", beds: [
-            { id: "bed_b1_201_1", isOccupied: false },
-            { id: "bed_b1_201_2", isOccupied: false },
-          ], images: [] },
-          { id: "rm_b1_202", roomNumber: "202", beds: [
-            { id: "bed_b1_202_1", isOccupied: false },
-            { id: "bed_b1_202_2", isOccupied: true, occupantName: "Occupant" },
-            { id: "bed_b1_202_3", isOccupied: false },
-          ], images: [] },
-        ],
-      },
-      {
-        id: "fl_b1_3",
-        floorNumber: 3,
-        rooms: [
-          { id: "rm_b1_301", roomNumber: "301", beds: [
-            { id: "bed_b1_301_1", isOccupied: true, occupantName: "Occupant" },
-            { id: "bed_b1_301_2", isOccupied: true, occupantName: "Occupant" },
-          ], images: [] },
-        ],
-      },
-    ],
-  },
-  {
-    id: "b2",
-    name: "Girls Annex",
-    gender: "Girls",
-    images: [],
-    floors: [
-      {
-        id: "fl_b2_1",
-        floorNumber: 1,
-        rooms: [
-          { id: "rm_b2_101", roomNumber: "101", beds: [
-            { id: "bed_b2_101_1", isOccupied: true, occupantName: "Occupant" },
-            { id: "bed_b2_101_2", isOccupied: false },
-          ], images: [] },
-          { id: "rm_b2_102", roomNumber: "102", beds: [
-            { id: "bed_b2_102_1", isOccupied: true, occupantName: "Occupant" },
-            { id: "bed_b2_102_2", isOccupied: true, occupantName: "Occupant" },
-            { id: "bed_b2_102_3", isOccupied: false },
-          ], images: [] },
-        ],
-      },
-      {
-        id: "fl_b2_2",
-        floorNumber: 2,
-        rooms: [
-          { id: "rm_b2_201", roomNumber: "201", beds: [
-            { id: "bed_b2_201_1", isOccupied: false },
-            { id: "bed_b2_201_2", isOccupied: false },
-          ], images: [] },
-        ],
-      },
-    ],
-  },
-];
+interface WizardBuilding {
+  id: string;
+  name: string;
+  floors: number;
+  gender: string;
+}
 
+interface WizardRoom {
+  id: string;
+  buildingId: string;
+  floor: number;
+  roomNumber: string;
+  beds: number;
+}
+
+interface WizardListing {
+  id: string;
+  hostelName: string;
+  city: string;
+  town: string;
+  adminFullName: string;
+  adminEmail: string;
+  adminPassword: string;
+  buildings: WizardBuilding[];
+  rooms: WizardRoom[];
+  createdAt: string;
+  // There may be other fields (pricing, images, etc.) we don't need here
+  [key: string]: unknown;
+}
+
+function mapGender(g: string): "Boys" | "Girls" | "Co-ed" {
+  const lower = g.toLowerCase();
+  if (lower === "boys" || lower === "male") return "Boys";
+  if (lower === "girls" || lower === "female") return "Girls";
+  return "Co-ed";
+}
+
+function transformWizardToAdmin(listing: WizardListing): MockBuilding[] {
+  return listing.buildings.map((wb) => {
+    // Find rooms for this building
+    const buildingRooms = listing.rooms.filter((r) => r.buildingId === wb.id);
+
+    // Group rooms by floor number
+    const floorMap = new Map<number, WizardRoom[]>();
+    for (const room of buildingRooms) {
+      const floorNum = room.floor;
+      if (!floorMap.has(floorNum)) floorMap.set(floorNum, []);
+      floorMap.get(floorNum)!.push(room);
+    }
+
+    // If no rooms yet, create empty floors based on the building's floor count
+    const floors: MockFloor[] = [];
+    const maxFloor = Math.max(wb.floors, ...Array.from(floorMap.keys()));
+    for (let i = 1; i <= maxFloor; i++) {
+      const floorRooms = floorMap.get(i) || [];
+      floors.push({
+        id: `fl_${wb.id}_${i}`,
+        floorNumber: i,
+        rooms: floorRooms.map((wr) => ({
+          id: wr.id,
+          roomNumber: wr.roomNumber,
+          beds: makeBeds(wr.beds || 2),
+          images: [],
+        })),
+      });
+    }
+
+    return {
+      id: wb.id,
+      name: wb.name,
+      gender: mapGender(wb.gender),
+      images: [],
+      floors,
+    };
+  });
+}
+
+/* ============================================================
+   LOCALSTORAGE KEYS
+   ============================================================ */
+
+const LS_LISTINGS = "hostelIn_listings";
+const LS_ACTIVE = "hostelIn_activeHostel";
+const LS_ADMIN_DATA = "hostelIn_adminData"; // persisted admin state
+
+/* ============================================================
+   LOAD DATA FROM LOCALSTORAGE
+   ============================================================ */
+
+function loadAdminState(): { buildings: MockBuilding[]; meta: HostelMeta | null } {
+  try {
+    const activeId = localStorage.getItem(LS_ACTIVE);
+    if (!activeId) return { buildings: [], meta: null };
+
+    // First check if admin has made edits (persisted admin data)
+    const savedAdmin = localStorage.getItem(LS_ADMIN_DATA);
+    if (savedAdmin) {
+      const parsed = JSON.parse(savedAdmin);
+      if (parsed.hostelId === activeId && parsed.buildings) {
+        return {
+          buildings: parsed.buildings,
+          meta: parsed.meta || null,
+        };
+      }
+    }
+
+    // Otherwise, transform from wizard listings
+    const listingsRaw = localStorage.getItem(LS_LISTINGS);
+    if (!listingsRaw) return { buildings: [], meta: null };
+
+    const listings: WizardListing[] = JSON.parse(listingsRaw);
+    const listing = listings.find((l) => l.id === activeId);
+    if (!listing) return { buildings: [], meta: null };
+
+    const buildings = transformWizardToAdmin(listing);
+    const meta: HostelMeta = {
+      hostelName: listing.hostelName,
+      city: listing.city,
+      town: listing.town || "",
+      adminFullName: listing.adminFullName,
+      adminEmail: listing.adminEmail,
+      hostelId: listing.id,
+      createdAt: listing.createdAt,
+    };
+
+    return { buildings, meta };
+  } catch (err) {
+    console.error("Failed to load admin state:", err);
+    return { buildings: [], meta: null };
+  }
+}
 
 /* ============================================================
    DERIVED STAT HELPERS
@@ -173,6 +224,8 @@ export const floorBedCount = (f: MockFloor) => f.rooms.reduce((s, r) => s + r.be
 interface AdminDataContextType {
   buildings: MockBuilding[];
   setBuildings: React.Dispatch<React.SetStateAction<MockBuilding[]>>;
+  meta: HostelMeta | null;
+  setMeta: React.Dispatch<React.SetStateAction<HostelMeta | null>>;
 }
 
 const AdminDataContext = createContext<AdminDataContextType | null>(null);
@@ -182,10 +235,36 @@ const AdminDataContext = createContext<AdminDataContextType | null>(null);
    ============================================================ */
 
 export function AdminDataProvider({ children }: { children: ReactNode }) {
-  const [buildings, setBuildings] = useState<MockBuilding[]>(INITIAL_DATA);
+  const [buildings, setBuildings] = useState<MockBuilding[]>([]);
+  const [meta, setMeta] = useState<HostelMeta | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  // Load from localStorage on mount (client-side only)
+  useEffect(() => {
+    const state = loadAdminState();
+    setBuildings(state.buildings);
+    setMeta(state.meta);
+    setLoaded(true);
+  }, []);
+
+  // Persist changes to localStorage whenever buildings change
+  useEffect(() => {
+    if (!loaded) return; // Don't persist the initial empty state
+    try {
+      const activeId = localStorage.getItem(LS_ACTIVE);
+      if (activeId) {
+        localStorage.setItem(
+          LS_ADMIN_DATA,
+          JSON.stringify({ hostelId: activeId, buildings, meta })
+        );
+      }
+    } catch (err) {
+      console.error("Failed to persist admin state:", err);
+    }
+  }, [buildings, meta, loaded]);
 
   return (
-    <AdminDataContext.Provider value={{ buildings, setBuildings }}>
+    <AdminDataContext.Provider value={{ buildings, setBuildings, meta, setMeta }}>
       {children}
     </AdminDataContext.Provider>
   );

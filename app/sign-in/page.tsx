@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { IconLock, IconMail, IconEye, IconEyeOff } from '@/components/icons';
-import { Tweaks } from '@/lib/types';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -12,10 +11,8 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [tweaks, setTweaks] = useState<Tweaks | null>(null);
 
   useEffect(() => {
-    // Inject brand colors
     const red = "#C0392B";
     const r = parseInt(red.slice(1, 3), 16);
     const g = parseInt(red.slice(3, 5), 16);
@@ -29,21 +26,37 @@ export default function SignInPage() {
     setLoading(true);
     setError('');
 
-    // Simulate mock authentication
     setTimeout(() => {
-      if (email === 'admin@hostelin.pk' && password === 'admin123') {
-        // Successful login
-        localStorage.setItem('hostelIn_auth', 'true');
-        router.push('/admin');
-      } else if (email && password) {
-        // Mock success for any email/pass for now to allow testing
-        localStorage.setItem('hostelIn_auth', 'true');
-        router.push('/admin');
-      } else {
-        setError('Please enter valid credentials.');
+      try {
+        // Read all saved hostel listings
+        const listingsRaw = localStorage.getItem('hostelIn_listings');
+        const listings = listingsRaw ? JSON.parse(listingsRaw) : [];
+
+        // Find a listing whose adminEmail and adminPassword match
+        const matched = listings.find(
+          (l: { adminEmail: string; adminPassword: string }) =>
+            l.adminEmail.toLowerCase() === email.toLowerCase() && l.adminPassword === password
+        );
+
+        if (matched) {
+          // Successful login — set auth and active hostel
+          localStorage.setItem('hostelIn_auth', 'true');
+          localStorage.setItem('hostelIn_activeHostel', matched.id);
+          // Clear any stale persisted admin data so fresh transform happens
+          localStorage.removeItem('hostelIn_adminData');
+          router.push('/admin');
+        } else if (listings.length === 0) {
+          setError('No hostel listings found. Please list your hostel first.');
+          setLoading(false);
+        } else {
+          setError('Invalid email or password. Please try again.');
+          setLoading(false);
+        }
+      } catch {
+        setError('Something went wrong. Please try again.');
         setLoading(false);
       }
-    }, 1200);
+    }, 1000);
   };
 
   return (
@@ -74,7 +87,7 @@ export default function SignInPage() {
               fontFamily: 'var(--font-dm-sans), sans-serif', 
               color: '#666', 
               fontSize: 15 
-            }}>Sign in to manage your hostel listings</p>
+            }}>Sign in with the credentials you used when listing your hostel</p>
           </div>
 
           <form onSubmit={handleSignIn}>
@@ -87,7 +100,7 @@ export default function SignInPage() {
                 <input 
                   type="email" 
                   className="wizard-input" 
-                  placeholder="admin@hostelin.pk"
+                  placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={{ paddingLeft: 44 }}
