@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { IconLayers, IconBuilding, IconTrash, IconPlus, IconChevronDown, IconChevronUp, IconHash, IconBed } from "@/components/icons";
+import { IconLayers, IconBuilding, IconTrash, IconPlus, IconChevronDown, IconChevronUp, IconHash, IconBed, IconEdit } from "@/components/icons";
 import Swal from "sweetalert2";
 import { useAdminData } from "../AdminDataContext";
 
 export default function FloorsManagement() {
-  const { buildings, apiAddFloor, apiEditFloor, apiDeleteFloor, apiAddRoom } = useAdminData();
+  const { buildings, apiAddFloor, apiEditFloor, apiDeleteFloor, apiAddRoom, apiEditRoom } = useAdminData();
   const [expandedFloors, setExpandedFloors] = useState<string[]>([]);
 
   const toggleExpand = (id: string) => {
@@ -59,13 +59,62 @@ export default function FloorsManagement() {
   };
 
   const addRoomToFloor = (floorId: string) => {
-    Swal.fire({ title: "Room Number", input: "text", inputPlaceholder: "e.g. 104", showCancelButton: true, confirmButtonColor: "#C0392B", inputValidator: v => !v ? "Required" : null }).then(r1 => {
-      if (!r1.isConfirmed) return;
-      Swal.fire({ title: "Beds", input: "number", inputValue: "2", showCancelButton: true, confirmButtonColor: "#C0392B" }).then(async r2 => {
-        if (!r2.isConfirmed) return;
-        await apiAddRoom(floorId, r1.value, parseInt(r2.value) || 2);
-        Swal.fire("Added!", "Room created.", "success");
-      });
+    Swal.fire({
+      title: "Add Room",
+      html: `
+        <div style="text-align:left">
+          <label style="display:block;margin-bottom:8px;font-weight:600">Room Number</label>
+          <input id="swal-room" type="text" class="swal2-input" style="margin:0;width:100%" placeholder="e.g. 104">
+          <label style="display:block;margin-top:16px;margin-bottom:8px;font-weight:600">Number of Beds</label>
+          <input id="swal-beds" type="number" class="swal2-input" style="margin:0;width:100%" value="2" min="1" max="20">
+          <label style="display:block;margin-top:16px;margin-bottom:8px;font-weight:600">Monthly Price (Rs)</label>
+          <input id="swal-price" type="number" class="swal2-input" style="margin:0;width:100%" placeholder="0">
+        </div>`,
+      showCancelButton: true,
+      confirmButtonColor: "#C0392B",
+      confirmButtonText: "Add",
+      preConfirm: () => {
+        const roomNum = (document.getElementById("swal-room") as HTMLInputElement).value;
+        const bedCount = parseInt((document.getElementById("swal-beds") as HTMLInputElement).value) || 2;
+        const priceMonthly = parseInt((document.getElementById("swal-price") as HTMLInputElement).value) || 0;
+        if (!roomNum) {
+          Swal.showValidationMessage("Room number is required");
+          return;
+        }
+        return { roomNum, bedCount, priceMonthly };
+      },
+    }).then(async (r) => {
+      if (!r.isConfirmed || !r.value) return;
+      await apiAddRoom(floorId, r.value.roomNum, r.value.bedCount, r.value.priceMonthly);
+      Swal.fire("Added!", "Room created.", "success");
+    });
+  };
+
+  const editRoom = (roomId: string, currentNum: string, currentPrice?: number) => {
+    Swal.fire({
+      title: "Edit Room",
+      html: `
+        <div style="text-align:left">
+          <label style="display:block;margin-bottom:8px;font-weight:600">Room Number</label>
+          <input id="swal-edit-room" type="text" class="swal2-input" style="margin:0;width:100%" value="${currentNum}">
+          <label style="display:block;margin-top:16px;margin-bottom:8px;font-weight:600">Monthly Price (Rs)</label>
+          <input id="swal-edit-price" type="number" class="swal2-input" style="margin:0;width:100%" value="${currentPrice || 0}">
+        </div>`,
+      showCancelButton: true,
+      confirmButtonColor: "#C0392B",
+      confirmButtonText: "Update",
+      preConfirm: () => {
+        const roomNum = (document.getElementById("swal-edit-room") as HTMLInputElement).value;
+        const priceMonthly = parseInt((document.getElementById("swal-edit-price") as HTMLInputElement).value) || 0;
+        if (!roomNum) {
+          Swal.showValidationMessage("Room number required");
+          return;
+        }
+        return { roomNum, priceMonthly };
+      },
+    }).then(async (r) => {
+      if (!r.isConfirmed || !r.value) return;
+      await apiEditRoom(roomId, r.value.roomNum, r.value.priceMonthly);
     });
   };
 
@@ -103,8 +152,13 @@ export default function FloorsManagement() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
                     {f.rooms.map(room => (
                       <div key={room.id} style={{ background: "white", padding: "12px 16px", borderRadius: 10, border: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}><IconHash size={16} color="#8b5cf6" /><span style={{ fontSize: 14, fontWeight: 700, color: "#2C2C2C" }}>Room {room.roomNumber}</span></div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "#888", display: "flex", alignItems: "center", gap: 4 }}><IconBed size={14} /> {room.beds.length}</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}><IconHash size={16} color="#8b5cf6" /><span style={{ fontSize: 14, fontWeight: 700, color: "#2C2C2C" }}>Room {room.roomNumber}</span></div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "#888", display: "flex", alignItems: "center", gap: 4 }}><IconBed size={14} /> {room.beds.length} Beds • Rs {room.priceMonthly?.toLocaleString() || 0}/mo</div>
+                        </div>
+                        <button onClick={() => editRoom(room.id, room.roomNumber, room.priceMonthly)} style={{ border: "none", background: "none", color: "#666", cursor: "pointer", padding: 4 }} title="Edit Room">
+                          <IconEdit size={14} />
+                        </button>
                       </div>
                     ))}
                     <button onClick={() => addRoomToFloor(f.id)} style={{ border: "1.5px dashed #ccc", borderRadius: 10, padding: "12px", background: "none", color: "#999", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><IconPlus size={14} /> Add Room</button>

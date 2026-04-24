@@ -13,6 +13,7 @@ import {
   IconLayers,
   IconPlus,
   IconHash,
+  IconEdit,
 } from "@/components/icons";
 import {
   useAdminData,
@@ -43,6 +44,7 @@ export default function BuildingsManagement() {
     apiAddFloor,
     apiDeleteFloor,
     apiAddRoom,
+    apiEditRoom,
     apiDeleteRoom,
     apiAddBed,
     apiDeleteBed,
@@ -189,30 +191,60 @@ export default function BuildingsManagement() {
   const addRoom = (_buildingId: string, floorId: string) =>
     Swal.fire({
       title: "Add Room",
-      input: "text",
-      inputLabel: "Room number",
-      inputPlaceholder: "e.g. 104",
+      html: `
+        <div style="text-align:left">
+          <label style="display:block;margin-bottom:8px;font-weight:600">Room Number</label>
+          <input id="swal-room" type="text" class="swal2-input" style="margin:0;width:100%" placeholder="e.g. 104">
+          <label style="display:block;margin-top:16px;margin-bottom:8px;font-weight:600">Number of Beds</label>
+          <input id="swal-beds" type="number" class="swal2-input" style="margin:0;width:100%" value="2" min="1" max="20">
+          <label style="display:block;margin-top:16px;margin-bottom:8px;font-weight:600">Monthly Price (Rs)</label>
+          <input id="swal-price" type="number" class="swal2-input" style="margin:0;width:100%" placeholder="0">
+        </div>`,
       showCancelButton: true,
       confirmButtonColor: "#C0392B",
       confirmButtonText: "Add",
-      inputValidator: (v) => (!v ? "Room number is required" : null),
-    }).then((result) => {
-      if (!result.isConfirmed || !result.value) return;
-      Swal.fire({
-        title: "Number of Beds",
-        input: "number",
-        inputLabel: "How many beds in this room?",
-        inputAttributes: { min: "1", max: "20" },
-        inputValue: "2",
-        showCancelButton: true,
-        confirmButtonColor: "#C0392B",
-        confirmButtonText: "Create",
-      }).then((r2) => {
-        if (!r2.isConfirmed) return;
-        const bedCount = Math.max(1, parseInt(String(r2.value || "1"), 10));
-        apiAddRoom(floorId, String(result.value), bedCount);
-      });
+      preConfirm: () => {
+        const roomNum = (document.getElementById("swal-room") as HTMLInputElement).value;
+        const bedCount = parseInt((document.getElementById("swal-beds") as HTMLInputElement).value) || 2;
+        const priceMonthly = parseInt((document.getElementById("swal-price") as HTMLInputElement).value) || 0;
+        if (!roomNum) {
+          Swal.showValidationMessage("Room number is required");
+          return;
+        }
+        return { roomNum, bedCount, priceMonthly };
+      },
+    }).then((r) => {
+      if (!r.isConfirmed || !r.value) return;
+      apiAddRoom(floorId, r.value.roomNum, r.value.bedCount, r.value.priceMonthly);
     });
+
+  const editRoom = (roomId: string, currentNum: string, currentPrice?: number) => {
+    Swal.fire({
+      title: "Edit Room",
+      html: `
+        <div style="text-align:left">
+          <label style="display:block;margin-bottom:8px;font-weight:600">Room Number</label>
+          <input id="swal-edit-room" type="text" class="swal2-input" style="margin:0;width:100%" value="${currentNum}">
+          <label style="display:block;margin-top:16px;margin-bottom:8px;font-weight:600">Monthly Price (Rs)</label>
+          <input id="swal-edit-price" type="number" class="swal2-input" style="margin:0;width:100%" value="${currentPrice || 0}">
+        </div>`,
+      showCancelButton: true,
+      confirmButtonColor: "#C0392B",
+      confirmButtonText: "Update",
+      preConfirm: () => {
+        const roomNum = (document.getElementById("swal-edit-room") as HTMLInputElement).value;
+        const priceMonthly = parseInt((document.getElementById("swal-edit-price") as HTMLInputElement).value) || 0;
+        if (!roomNum) {
+          Swal.showValidationMessage("Room number required");
+          return;
+        }
+        return { roomNum, priceMonthly };
+      },
+    }).then(async (r) => {
+      if (!r.isConfirmed || !r.value) return;
+      await apiEditRoom(roomId, r.value.roomNum, r.value.priceMonthly);
+    });
+  };
 
   const removeRoom = (_buildingId: string, _floorId: string, roomId: string) =>
     Swal.fire({
@@ -681,7 +713,7 @@ export default function BuildingsManagement() {
                                 )}
 
                                 {f.rooms.map((r) => (
-                                  <RoomBlock
+                                  <RoomView
                                     key={r.id}
                                     room={r}
                                     onToggleBed={(bed) => toggleBed(b.id, f.id, r.id, bed)}
@@ -691,6 +723,7 @@ export default function BuildingsManagement() {
                                     onRemoveImage={(imgId) =>
                                       removeRoomImage(b.id, f.id, r.id, imgId)
                                     }
+                                    onEditRoom={() => editRoom(r.id, r.roomNumber, r.priceMonthly)}
                                     onRemoveRoom={() => removeRoom(b.id, f.id, r.id)}
                                     fileInputs={fileInputs}
                                     uploadKey={`r-${r.id}`}
@@ -888,13 +921,14 @@ function ImageGrid({
   );
 }
 
-function RoomBlock({
+function RoomView({
   room,
   onToggleBed,
   onAddBed,
   onRemoveBed,
   onAddImages,
   onRemoveImage,
+  onEditRoom,
   onRemoveRoom,
   fileInputs,
   uploadKey,
@@ -905,11 +939,11 @@ function RoomBlock({
   onRemoveBed: (bedId: string) => void;
   onAddImages: (files: File[]) => void;
   onRemoveImage: (id: string) => void;
+  onEditRoom: () => void;
   onRemoveRoom: () => void;
   fileInputs: React.MutableRefObject<Record<string, HTMLInputElement | null>>;
   uploadKey: string;
 }) {
-  const occupied = room.beds.filter((b) => b.isOccupied).length;
   return (
     <div
       style={{
@@ -955,11 +989,18 @@ function RoomBlock({
               Room {room.roomNumber}
             </div>
             <div style={{ fontSize: 12, color: "#888", fontWeight: 600 }}>
-              {room.beds.length} Beds • {occupied} Occupied • {room.beds.length - occupied} Available
+              {room.beds.length} Beds • Rs {room.priceMonthly?.toLocaleString() || 0}/mo
             </div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={onEditRoom}
+            className="wizard-btn wizard-btn-back"
+            style={{ padding: "6px 12px", fontSize: 12 }}
+          >
+            <IconEdit size={12} /> Edit
+          </button>
           <button
             onClick={onAddBed}
             className="wizard-btn wizard-btn-back"

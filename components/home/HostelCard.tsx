@@ -111,27 +111,34 @@ export default function HostelCard({ hostel, tweaks }: HostelCardProps) {
           {hostel.amenities.map((a: string) => <AmenityIcon key={a} type={a} />)}
         </div>
 
-        <div style={{ marginTop: 'auto', paddingTop: 18, borderTop: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#999' }}>From </span>
-            <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: 22, color: red }}>
-              {hostel.price === "Check Price" ? "Check Price" : `Rs ${hostel.price}`}
-            </span>
-            {hostel.price !== "Check Price" && (
-              <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#999' }}>/mo</span>
-            )}
+        <div style={{ marginTop: 'auto', paddingTop: 18, borderTop: '1px solid #f0f0f0', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.02em', marginBottom: 4 }}>Starting from</span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+              {hostel.price !== "Check Price" && (
+                <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: 14, color: red }}>Rs</span>
+              )}
+              <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: hostel.price === "Check Price" ? 18 : 22, color: red, lineHeight: 1 }}>
+                {hostel.price}
+              </span>
+              {hostel.price !== "Check Price" && (
+                <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#999', marginLeft: 2 }}>/mo</span>
+              )}
+            </div>
           </div>
           <button style={{ 
-            padding: '10px 20px', 
-            borderRadius: 12, 
+            padding: '12px 18px', 
+            borderRadius: 14, 
             border: `2px solid ${red}`, 
             background: 'transparent', 
             color: red, 
             fontFamily: 'Plus Jakarta Sans, sans-serif', 
-            fontWeight: 700, 
-            fontSize: 14, 
+            fontWeight: 800, 
+            fontSize: 13, 
             cursor: 'pointer',
             transition: 'all 0.2s',
+            whiteSpace: 'nowrap',
+            flexShrink: 0
           }}
           onMouseEnter={e => { e.currentTarget.style.background = red; e.currentTarget.style.color = 'white'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = red; }}
