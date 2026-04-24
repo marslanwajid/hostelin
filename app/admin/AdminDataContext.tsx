@@ -15,6 +15,7 @@ export interface MockBed {
   id: string;
   isOccupied: boolean;
   occupantName?: string;
+  occupiedDate?: string;
 }
 
 export interface MockRoom {
