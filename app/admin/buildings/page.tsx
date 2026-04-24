@@ -274,14 +274,14 @@ export default function BuildingsManagement() {
       Swal.fire({
         title: "Gender",
         input: "select",
-        inputOptions: { Boys: "Boys Only", Girls: "Girls Only", "Co-ed": "Co-ed" },
-        inputValue: "Boys",
+        inputOptions: { Male: "Male Only", Female: "Female Only", Both: "Both" },
+        inputValue: "Male",
         showCancelButton: true,
         confirmButtonColor: "#C0392B",
         confirmButtonText: "Create",
       }).then(async (r2) => {
         if (!r2.isConfirmed) return;
-        const newB = await apiAddBuilding(String(r1.value), r2.value || "Boys");
+        const newB = await apiAddBuilding(String(r1.value), r2.value || "Male");
         if (newB) setOpenBuildings((p) => ({ ...p, [newB.id]: true }));
       });
     });
@@ -504,7 +504,12 @@ export default function BuildingsManagement() {
                         flexWrap: "wrap",
                       }}
                     >
-                      <span>{b.gender} Only</span>
+                      <span>
+                        {b.gender === 'Both' || b.gender === 'Co-ed' ? 'Both (Mixed)' : 
+                         b.gender === 'Male' || b.gender === 'Boys' ? 'Male Only' : 
+                         b.gender === 'Female' || b.gender === 'Girls' ? 'Female Only' : 
+                         `${b.gender} Only`}
+                      </span>
                       <span>•</span>
                       <span>{b.floors.length} Floors</span>
                       <span>•</span>

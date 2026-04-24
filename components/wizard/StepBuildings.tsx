@@ -24,7 +24,7 @@ export default function StepBuildings({ data, setData, red }: Props) {
   const addBuilding = () => {
     setData(d => ({
       ...d,
-      buildings: [...d.buildings, { id: uid('b'), name: '', floors: 1, gender: 'both' }],
+      buildings: [...d.buildings, { id: uid('b'), name: '', floors: 1, gender: 'Both' }],
     }));
   };
 
@@ -76,7 +76,7 @@ export default function StepBuildings({ data, setData, red }: Props) {
               />
             </div>
             <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1.5px solid #e5e7eb' }}>
-              {[{ value: 'males', label: '♂ Males', color: '#3b82f6' }, { value: 'females', label: '♀ Females', color: '#ec4899' }, { value: 'both', label: '⚥ Both', color: '#8b5cf6' }].map(opt => (
+              {[{ value: 'Male', label: '♂ Male', color: '#3b82f6' }, { value: 'Female', label: '♀ Female', color: '#ec4899' }, { value: 'Both', label: '⚥ Both', color: '#8b5cf6' }].map(opt => (
                 <button
                   key={opt.value}
                   type="button"

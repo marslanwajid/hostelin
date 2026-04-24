@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { IconHome, IconBuilding, IconBed, IconLogOut, IconLayers, IconHash } from "@/components/icons";
+import { IconHome, IconBuilding, IconBed, IconLogOut, IconLayers, IconHash, IconSettings } from "@/components/icons";
 import { AdminDataProvider, useAdminData } from "./AdminDataContext";
 
 function AdminContent({ children }: { children: React.ReactNode }) {
@@ -23,6 +23,7 @@ function AdminContent({ children }: { children: React.ReactNode }) {
     { name: "Floors", path: "/admin/floors", icon: <IconLayers size={20} /> },
     { name: "Rooms", path: "/admin/rooms", icon: <IconHash size={20} /> },
     { name: "Beds", path: "/admin/beds", icon: <IconBed size={20} /> },
+    { name: "Settings", path: "/admin/settings", icon: <IconSettings size={20} /> },
   ];
 
   const displayName = meta?.adminFullName || "Hostel Admin";

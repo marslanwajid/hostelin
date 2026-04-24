@@ -38,7 +38,7 @@ export default function HostelCard({ hostel, tweaks }: HostelCardProps) {
   const router = useRouter();
   const red = tweaks?.primaryColor || '#C0392B';
   const [hov, setHov] = useState(false);
-  const typeColors: Record<string, string> = { Male: '#2980b9', Female: '#8e44ad', 'Co-ed': '#27ae60' };
+  const typeColors: Record<string, string> = { Male: '#2980b9', Female: '#8e44ad', Both: '#27ae60' };
 
   return (
     <div
@@ -115,13 +115,13 @@ export default function HostelCard({ hostel, tweaks }: HostelCardProps) {
           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '0.02em', marginBottom: 4 }}>Starting from</span>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              {hostel.price !== "Check Price" && (
+              {hostel.price !== "Call for Price" && (
                 <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: 14, color: red }}>Rs</span>
               )}
-              <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: hostel.price === "Check Price" ? 18 : 22, color: red, lineHeight: 1 }}>
+              <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: hostel.price === "Call for Price" ? 16 : 22, color: red, lineHeight: 1 }}>
                 {hostel.price}
               </span>
-              {hostel.price !== "Check Price" && (
+              {hostel.price !== "Call for Price" && (
                 <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#999', marginLeft: 2 }}>/mo</span>
               )}
             </div>

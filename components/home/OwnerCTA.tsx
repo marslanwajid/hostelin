@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import { useRouter } from 'next/navigation';
 import { IconCheck, IconArrowRight } from '../icons';
 import { Tweaks } from '@/lib/types';
 
@@ -9,6 +9,7 @@ interface OwnerCTAProps {
 }
 
 export default function OwnerCTA({ tweaks }: OwnerCTAProps) {
+  const router = useRouter();
   const red = tweaks?.primaryColor || '#C0392B';
   const perks = ['Free listing — no hidden fees', 'Verified owner badge', 'Online booking management', 'Monthly analytics dashboard', 'Direct payment collection'];
 
@@ -122,6 +123,7 @@ export default function OwnerCTA({ tweaks }: OwnerCTAProps) {
             <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.7)', marginBottom: 12 }}>Join 500+ hostel owners already on our platform</div>
             <h3 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: 'clamp(24px,3vw,36px)', color: 'white', margin: '0 0 28px', lineHeight: 1.2 }}>Start Getting Bookings Today — It&apos;s Free</h3>
             <button 
+              onClick={() => router.push('/list-hostel')}
               style={{
                 padding: '16px 40px', 
                 borderRadius: 12, 

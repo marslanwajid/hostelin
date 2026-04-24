@@ -58,7 +58,12 @@ export default function AdminOverview() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "#2C2C2C" }}>{b.name}</div>
-                  <div style={{ fontSize: 12, color: "#888" }}>{b.gender} • {b.floors.length} Floors • {countRooms(b)} Rooms • {beds} Beds</div>
+                  <div style={{ fontSize: 12, color: "#888" }}>
+                    {b.gender === 'Both' || b.gender === 'Co-ed' ? 'Both (Mixed)' : 
+                     b.gender === 'Male' || b.gender === 'Boys' ? 'Male Only' : 
+                     b.gender === 'Female' || b.gender === 'Girls' ? 'Female Only' : 
+                     b.gender} • {b.floors.length} Floors • {countRooms(b)} Rooms • {beds} Beds
+                  </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: 18, fontWeight: 800, color: pct > 80 ? "#dc2626" : "#16a34a" }}>{pct}%</div>

@@ -35,7 +35,7 @@ export interface MockFloor {
 export interface MockBuilding {
   id: string;
   name: string;
-  gender: "Boys" | "Girls" | "Co-ed";
+  gender: "Male" | "Female" | "Both";
   images: MockImage[];
   floors: MockFloor[];
 }
@@ -48,6 +48,8 @@ export interface HostelMeta {
   adminEmail: string;
   hostelId: string;
   images: string[];
+  hostelType: "Male" | "Female" | "Both";
+  description: string;
 }
 
 /* ============================================================
@@ -95,6 +97,7 @@ interface AdminDataContextType {
   apiDeleteBed: (bedId: string) => Promise<boolean>;
   apiUpdateBuildingImages: (buildingId: string, images: string[]) => Promise<boolean>;
   apiUpdateRoomImages: (roomId: string, images: string[]) => Promise<boolean>;
+  apiUpdateHostelMeta: (updated: Partial<HostelMeta>) => Promise<boolean>;
 }
 
 const AdminDataContext = createContext<AdminDataContextType | null>(null);
@@ -133,6 +136,8 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
           adminEmail: data.hostel.adminEmail,
           hostelId: data.hostel._id,
           images: data.hostel.images || [],
+          hostelType: data.hostel.hostelType || "Both",
+          description: data.hostel.description || "",
         });
       }
     } catch (err) {
@@ -478,6 +483,25 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
+  const apiUpdateHostelMeta = async (updated: Partial<HostelMeta>): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/hostel/meta", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hostelId: hostelId(), ...updated }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMeta(data.hostel);
+        if (updated.hostelType) {
+          fetchBuildings();
+        }
+        return true;
+      }
+    } catch (err) { console.error(err); }
+    return false;
+  };
+
   return (
     <AdminDataContext.Provider
       value={{
@@ -488,6 +512,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         apiAddRoom, apiEditRoom, apiDeleteRoom,
         apiAddBed, apiToggleBed, apiDeleteBed,
         apiUpdateBuildingImages, apiUpdateRoomImages,
+        apiUpdateHostelMeta,
       }}
     >
       {children}

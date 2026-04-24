@@ -18,16 +18,16 @@ export async function GET(req: NextRequest) {
       // Find buildings to determine type (Male/Female/Co-ed)
       const buildings = await Building.find({ hostelId: h._id }).lean();
       
-      let type: "Male" | "Female" | "Co-ed" = "Co-ed";
-      const genders = new Set(buildings.map(b => b.gender));
-      if (genders.size === 1) {
-        const g = Array.from(genders)[0];
-        if (g === "Boys") type = "Male";
-        else if (g === "Girls") type = "Female";
-      } else if (genders.size > 1) {
-        if (genders.has("Boys") && genders.has("Girls")) type = "Co-ed";
-        else if (genders.has("Boys")) type = "Male";
-        else if (genders.has("Girls")) type = "Female";
+      let type = h.hostelType || "Both";
+      if (!h.hostelType) {
+        const genders = new Set(buildings.map(b => b.gender));
+        if (genders.has("Both") || (genders.has("Male") && genders.has("Female"))) {
+          type = "Both";
+        } else if (genders.has("Male")) {
+          type = "Male";
+        } else if (genders.has("Female")) {
+          type = "Female";
+        }
       }
 
       // Find all rooms to determine min price
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
         name: h.hostelName,
         area: h.town || "General Area",
         city: h.city,
-        price: minPrice > 0 ? minPrice.toLocaleString() : "Check Price",
+        price: minPrice > 0 ? minPrice.toLocaleString() : "Call for Price",
         rating: 4.5,
         reviews: Math.floor(Math.random() * 200) + 50,
         type: type,

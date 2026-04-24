@@ -66,9 +66,9 @@ function FindHostelsContent() {
     const matchesGender = gender === "All" || h.type === gender;
     const matchesCity = city === "All" || h.city === city;
     
-    // Fix price matching for "Check Price"
+    // Fix price matching for "Call for Price"
     let matchesPrice = true;
-    if (h.price !== "Check Price") {
+    if (h.price !== "Call for Price") {
       matchesPrice = parseInt(h.price.replace(/,/g, '')) <= priceRange;
     }
     
@@ -97,7 +97,7 @@ function FindHostelsContent() {
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#666', marginBottom: 12, textTransform: 'uppercase' }}>Gender Type</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {["All", "Male", "Female", "Co-ed"].map(g => (
+                  {["All", "Male", "Female", "Both"].map(g => (
                     <button 
                       key={g} 
                       onClick={() => setGender(g)}

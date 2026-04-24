@@ -96,7 +96,7 @@ export default function HostelDetailPage({ params }: { params: Promise<{ id: str
               </div>
               <div style={{ background: '#fef2f2', padding: '12px 20px', borderRadius: 16, border: `1px solid ${red}22` }}>
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: red, textTransform: 'uppercase', marginBottom: 4 }}>Hostel For</span>
-                <span style={{ fontSize: 18, fontWeight: 800, color: '#2C2C2C' }}>{hostel.hostelType || 'Co-ed'}</span>
+                <span style={{ fontSize: 18, fontWeight: 800, color: '#2C2C2C' }}>{hostel.hostelType || 'Both'}</span>
               </div>
             </div>
 
@@ -206,7 +206,7 @@ export default function HostelDetailPage({ params }: { params: Promise<{ id: str
                           </div>
                           <div style={{ textAlign: 'right' }}>
                             <div style={{ fontSize: 22, fontWeight: 900, color: '#2C2C2C' }}>
-                              {r.priceMonthly ? `Rs ${r.priceMonthly.toLocaleString()}` : 'Check Price'}
+                              {r.priceMonthly ? `Rs ${r.priceMonthly.toLocaleString()}` : 'Call for Price'}
                             </div>
                             <div style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>per month</div>
                           </div>
@@ -224,7 +224,7 @@ export default function HostelDetailPage({ params }: { params: Promise<{ id: str
             <div style={{ background: '#fff', borderRadius: 32, padding: 36, boxShadow: '0 20px 60px rgba(0,0,0,0.1)', border: '1px solid #f0f0f0' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 28 }}>
                 <span style={{ fontSize: 32, fontWeight: 900, color: '#2C2C2C' }}>
-                  {hostel.startingPrice > 0 ? `Rs ${hostel.startingPrice.toLocaleString()}` : 'Check Price'}
+                  {hostel.startingPrice > 0 ? `Rs ${hostel.startingPrice.toLocaleString()}` : 'Call for Price'}
                 </span>
                 {hostel.startingPrice > 0 && (
                   <span style={{ fontSize: 16, color: '#888', fontWeight: 600, paddingBottom: 6 }}>/month onwards</span>

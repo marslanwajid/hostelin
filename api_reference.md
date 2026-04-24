@@ -1,6 +1,6 @@
 # HostelIn — Complete API Reference
 
-> **Total: 8 route files · 22 endpoints**
+> **Total: 9 route files · 23 endpoints**
 
 ---
 
@@ -81,6 +81,15 @@ These endpoints power the admin dashboard. They all require a `hostelId` (passed
 
 ---
 
+### `/api/hostel/meta`
+**File:** [route.ts](file:///c:/IT%20EMPIRE/IT%20Empire/hostel%20react/hostel-next/hostel-in/app/api/hostel/meta/route.ts)
+
+| Method | Purpose | Body Params | Response |
+|--------|---------|-------------|----------|
+| `PUT` | Update global hostel profile settings (name, type, area, description, admin name) | `{ hostelId, hostelName?, hostelType?, town?, description?, adminFullName? }` | `{ success, hostel }` |
+
+---
+
 ## 3. Public Discovery (`/api/hostels`) — *No Auth Required*
 
 These endpoints power the homepage, search/listing page, and hostel detail page.
@@ -93,7 +102,7 @@ These endpoints power the homepage, search/listing page, and hostel detail page.
 | `GET` | List all hostels with computed metadata (type, min price, gradient, amenities) for cards | None | `[{ id, name, area, city, price, rating, reviews, type, verified, image, grad, amenities, tags }]` |
 
 > [!NOTE]
-> Price is returned as a **formatted string** (`"12,000"` or `"Check Price"`). Rating and reviews are currently placeholder values.
+> Price is returned as a **formatted string** (`"12,000"` or `"Call for Price"`). Rating and reviews are currently placeholder values.
 
 ---
 
@@ -121,6 +130,7 @@ These endpoints power the homepage, search/listing page, and hostel detail page.
 | 6 | `/api/hostel/beds` | POST, PUT, DELETE | Admin | Admin Dashboard |
 | 7 | `/api/hostels` | GET | — | Homepage, Find Hostels |
 | 8 | `/api/hostels/[id]` | GET | — | Hostel Detail Page |
+| 9 | `/api/hostel/meta` | PUT | Admin | Admin Settings Page |
 
 ---
 
@@ -134,7 +144,8 @@ graph TD
     R --> Bd[Bed]
 
     H -.- Auth[Auth/Admin<br>email + password]
+    H -.- Meta[hostelType<br>description]
     R -.- Price[priceMonthly<br>priceWeekly<br>priceDaily]
-    B -.- Gender[Boys / Girls / Co-ed]
+    B -.- Gender[Male / Female / Both]
     Bd -.- Occ[isOccupied<br>occupantName<br>occupiedDate]
 ```

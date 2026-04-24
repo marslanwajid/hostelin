@@ -103,9 +103,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function mapGender(g: string): "Boys" | "Girls" | "Co-ed" {
+function mapGender(g: string): "Male" | "Female" | "Both" {
   const lower = (g || "").toLowerCase();
-  if (lower === "boys" || lower === "male") return "Boys";
-  if (lower === "girls" || lower === "female") return "Girls";
-  return "Co-ed";
+  if (lower === "boys" || lower === "male") return "Male";
+  if (lower === "girls" || lower === "female") return "Female";
+  return "Both";
 }
