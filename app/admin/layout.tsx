@@ -2,7 +2,8 @@
 
 import React, { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { IconHome, IconBuilding, IconBed, IconLogOut } from "@/components/icons";
+import { IconHome, IconBuilding, IconBed, IconLogOut, IconLayers, IconHash } from "@/components/icons";
+import { AdminDataProvider } from "./AdminDataContext";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -19,10 +20,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navLinks = [
     { name: "Overview", path: "/admin", icon: <IconHome size={20} /> },
     { name: "Buildings", path: "/admin/buildings", icon: <IconBuilding size={20} /> },
-    { name: "Rooms & Beds", path: "/admin/rooms", icon: <IconBed size={20} /> },
+    { name: "Floors", path: "/admin/floors", icon: <IconLayers size={20} /> },
+    { name: "Rooms", path: "/admin/rooms", icon: <IconHash size={20} /> },
+    { name: "Beds", path: "/admin/beds", icon: <IconBed size={20} /> },
   ];
 
   return (
+    <AdminDataProvider>
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8f9fb", fontFamily: "var(--font-dm-sans), sans-serif" }}>
       {/* Sidebar */}
       <aside
@@ -170,5 +174,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div style={{ padding: "32px", flex: 1 }}>{children}</div>
       </main>
     </div>
+    </AdminDataProvider>
   );
 }

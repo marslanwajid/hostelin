@@ -14,143 +14,32 @@ import {
   IconPlus,
   IconHash,
 } from "@/components/icons";
-
-/* ============================================================
-   TYPES — full Hostel → Building → Floor → Room → Bed hierarchy
-   ============================================================ */
-
-interface MockImage {
-  id: string;
-  url: string;
-}
-
-interface MockBed {
-  id: string;
-  isOccupied: boolean;
-  occupantName?: string;
-}
-
-interface MockRoom {
-  id: string;
-  roomNumber: string;
-  beds: MockBed[];
-  images: MockImage[];
-}
-
-interface MockFloor {
-  id: string;
-  floorNumber: number;
-  rooms: MockRoom[];
-}
-
-interface MockBuilding {
-  id: string;
-  name: string;
-  gender: "Boys" | "Girls" | "Co-ed";
-  images: MockImage[];
-  floors: MockFloor[];
-}
-
-/* ============================================================
-   INITIAL MOCK DATA
-   ============================================================ */
-
-const uid = (p = "id") => `${p}_${Math.random().toString(36).slice(2, 9)}`;
-
-const makeBeds = (n: number, occupiedIdx: number[] = []): MockBed[] =>
-  Array.from({ length: n }, (_, i) => ({
-    id: uid("bed"),
-    isOccupied: occupiedIdx.includes(i),
-    occupantName: occupiedIdx.includes(i) ? "Occupant" : undefined,
-  }));
-
-const INITIAL_DATA: MockBuilding[] = [
-  {
-    id: "b1",
-    name: "Main Boys Hostel",
-    gender: "Boys",
-    images: [],
-    floors: [
-      {
-        id: uid("fl"),
-        floorNumber: 1,
-        rooms: [
-          { id: uid("rm"), roomNumber: "101", beds: makeBeds(3, [0, 1]), images: [] },
-          { id: uid("rm"), roomNumber: "102", beds: makeBeds(2, [0]), images: [] },
-          { id: uid("rm"), roomNumber: "103", beds: makeBeds(4, [0, 1, 2]), images: [] },
-        ],
-      },
-      {
-        id: uid("fl"),
-        floorNumber: 2,
-        rooms: [
-          { id: uid("rm"), roomNumber: "201", beds: makeBeds(2), images: [] },
-          { id: uid("rm"), roomNumber: "202", beds: makeBeds(3, [1]), images: [] },
-        ],
-      },
-      {
-        id: uid("fl"),
-        floorNumber: 3,
-        rooms: [
-          { id: uid("rm"), roomNumber: "301", beds: makeBeds(2, [0, 1]), images: [] },
-        ],
-      },
-    ],
-  },
-  {
-    id: "b2",
-    name: "Girls Annex",
-    gender: "Girls",
-    images: [],
-    floors: [
-      {
-        id: uid("fl"),
-        floorNumber: 1,
-        rooms: [
-          { id: uid("rm"), roomNumber: "101", beds: makeBeds(2, [0]), images: [] },
-          { id: uid("rm"), roomNumber: "102", beds: makeBeds(3, [0, 1]), images: [] },
-        ],
-      },
-      {
-        id: uid("fl"),
-        floorNumber: 2,
-        rooms: [
-          { id: uid("rm"), roomNumber: "201", beds: makeBeds(2), images: [] },
-        ],
-      },
-    ],
-  },
-];
-
-/* ============================================================
-   HELPERS — counts
-   ============================================================ */
-
-const countRooms = (b: MockBuilding) => b.floors.reduce((s, f) => s + f.rooms.length, 0);
-const countBeds = (b: MockBuilding) =>
-  b.floors.reduce((s, f) => s + f.rooms.reduce((s2, r) => s2 + r.beds.length, 0), 0);
-const countOccupied = (b: MockBuilding) =>
-  b.floors.reduce(
-    (s, f) => s + f.rooms.reduce((s2, r) => s2 + r.beds.filter((bd) => bd.isOccupied).length, 0),
-    0
-  );
-const floorRoomCount = (f: MockFloor) => f.rooms.length;
-const floorBedCount = (f: MockFloor) => f.rooms.reduce((s, r) => s + r.beds.length, 0);
+import {
+  useAdminData,
+  uid,
+  makeBeds,
+  countRooms,
+  countBeds,
+  countOccupied,
+  floorRoomCount,
+  floorBedCount,
+  type MockBuilding,
+  type MockBed,
+  type MockRoom,
+  type MockImage,
+  type MockFloor,
+} from "../AdminDataContext";
 
 /* ============================================================
    MAIN COMPONENT
    ============================================================ */
 
 export default function BuildingsManagement() {
-  const [buildings, setBuildings] = useState<MockBuilding[]>(INITIAL_DATA);
+  const { buildings, setBuildings } = useAdminData();
 
-  // Collapse state keyed by id — floors & buildings default open for first load.
-  const [openBuildings, setOpenBuildings] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(INITIAL_DATA.map((b) => [b.id, true]))
-  );
-  const [openFloors, setOpenFloors] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(INITIAL_DATA.flatMap((b) => b.floors.map((f) => [f.id, true])))
-  );
+  // Collapse state — default collapsed (empty = collapsed, toggled entries = open)
+  const [openBuildings, setOpenBuildings] = useState<Record<string, boolean>>({});
+  const [openFloors, setOpenFloors] = useState<Record<string, boolean>>({});
 
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -647,7 +536,7 @@ export default function BuildingsManagement() {
       {/* BUILDING LIST */}
       <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
         {buildings.map((b) => {
-          const isOpen = openBuildings[b.id] !== false;
+          const isOpen = openBuildings[b.id] === true;
           const rooms = countRooms(b);
           const beds = countBeds(b);
           const occupied = countOccupied(b);
@@ -801,7 +690,7 @@ export default function BuildingsManagement() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                       {b.floors.map((f) => {
-                        const fOpen = openFloors[f.id] !== false;
+                        const fOpen = openFloors[f.id] === true;
                         return (
                           <div
                             key={f.id}

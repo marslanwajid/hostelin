@@ -14,12 +14,12 @@ export default function Footer({ tweaks }: FooterProps) {
 
   return (
     <footer 
+      className="footer-root"
       style={{ 
         background: '#2C2C2C', 
         padding: '64px 24px 0', 
         color: 'white',
         width: '100%',
-        display: 'block'
       }}
     >
       <div 
@@ -31,24 +31,28 @@ export default function Footer({ tweaks }: FooterProps) {
         }}
       >
         <div 
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-10 mb-14"
+          className="footer-grid"
           style={{ 
             display: 'grid', 
-            gridTemplateColumns: '1.4fr repeat(4, 1fr)', 
             gap: 40, 
             marginBottom: 56,
             width: '100%'
           }}
         >
           {/* Brand col */}
-          <div className="col-span-1 md:col-span-1">
-            <img src="/uploads/logo.webp" alt="HostelIn" style={{ height: 36, filter: 'brightness(0) invert(1)', marginBottom: 16, display: 'block' }} />
+          <div className="brand-column">
+            <img 
+              src="/uploads/logo.webp" 
+              alt="HostelIn" 
+              style={{ height: 36, filter: 'brightness(0) invert(1)', marginBottom: 16, display: 'block' }} 
+            />
             <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.5)', lineHeight: 1.75, maxWidth: 240, margin: '0 0 24px' }}>
               Pakistan&apos;s first dedicated hostel discovery and booking platform for students and working professionals.
             </p>
             <div style={{ display: 'flex', gap: 12 }}>
               {[IconInstagram, IconFacebook, IconTwitter, IconYoutube].map((Icon, i) => (
                 <a key={i} href="#" 
+                  className="social-link"
                   style={{ 
                     width: 38, 
                     height: 38, 
@@ -69,10 +73,13 @@ export default function Footer({ tweaks }: FooterProps) {
               ))}
             </div>
           </div>
+
           {/* Link cols */}
           {FOOTER_COLS.map(col => (
             <div key={col.title}>
-              <h4 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 14, color: 'white', margin: '0 0 20px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{col.title}</h4>
+              <h4 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 14, color: 'white', margin: '0 0 20px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                {col.title}
+              </h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {col.links.map(l => (
                   <li key={l}>
@@ -96,7 +103,8 @@ export default function Footer({ tweaks }: FooterProps) {
           ))}
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        {/* Bottom Bar */}
+        <div className="footer-bottom">
           <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
             © 2026 HostelIn.pk · <a href="#" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>Privacy Policy</a> · <a href="#" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>Terms of Service</a>
           </div>
@@ -105,9 +113,56 @@ export default function Footer({ tweaks }: FooterProps) {
           </div>
         </div>
       </div>
-      <style>{`
-        @media(max-width:900px){.footer-grid{grid-template-columns:1fr 1fr!important}} 
-        @media(max-width:520px){.footer-grid{grid-template-columns:1fr!important}}
+
+      <style jsx>{`
+        .footer-grid {
+          grid-template-columns: 1.4fr repeat(4, 1fr);
+        }
+        .footer-bottom {
+          border-top: 1px solid rgba(255,255,255,0.08);
+          padding: 24px 0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 16px;
+        }
+
+        /* Tablet View */
+        @media (max-width: 1024px) {
+          .footer-grid {
+            grid-template-columns: 1fr 1fr 1fr;
+          }
+          .brand-column {
+            grid-column: span 3;
+            margin-bottom: 20px;
+          }
+        }
+
+        /* Mobile View */
+        @media (max-width: 640px) {
+          .footer-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+          }
+          .brand-column {
+            grid-column: span 2;
+          }
+          .footer-bottom {
+            flex-direction: column;
+            text-align: center;
+            padding-bottom: 40px;
+          }
+        }
+
+        /* Small Mobile View */
+        @media (max-width: 400px) {
+          .footer-grid {
+            grid-template-columns: 1fr;
+          }
+          .brand-column {
+            grid-column: span 1;
+          }
+        }
       `}</style>
     </footer>
   );
