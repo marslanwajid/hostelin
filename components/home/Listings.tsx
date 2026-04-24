@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { IconChevronRight } from '../icons';
 import HostelCard from './HostelCard';
 import { HOSTELS, FILTERS } from '@/lib/constants';
@@ -11,10 +12,28 @@ interface ListingsProps {
 }
 
 export default function Listings({ tweaks }: ListingsProps) {
+  const router = useRouter();
   const red = tweaks?.primaryColor || '#C0392B';
   const [activeFilter, setActiveFilter] = useState('All');
+  const [hostels, setHostels] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const ref = useRef<HTMLElement>(null);
   const [vis, setVis] = useState(false);
+ 
+  useEffect(() => {
+    const fetchHostels = async () => {
+      try {
+        const res = await fetch('/api/hostels');
+        const data = await res.json();
+        if (Array.isArray(data)) setHostels(data);
+      } catch (err) {
+        console.error("Failed to fetch hostels:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHostels();
+  }, []);
 
   useEffect(() => {
     const obs = new IntersectionObserver(([e]) => {
@@ -26,8 +45,8 @@ export default function Listings({ tweaks }: ListingsProps) {
 
   const filterMap: Record<string, string | null> = { 'All': null, 'Male Only': 'Male', 'Female Only': 'Female', 'Co-ed': 'Co-ed' };
   const filtered = activeFilter === 'All' || !filterMap[activeFilter] 
-    ? HOSTELS 
-    : HOSTELS.filter(h => h.type === filterMap[activeFilter]);
+    ? hostels 
+    : hostels.filter(h => h.type === filterMap[activeFilter]);
 
   return (
     <section 
@@ -129,12 +148,20 @@ export default function Listings({ tweaks }: ListingsProps) {
             transition: 'all 0.7s ease 0.2s'
           }}
         >
-          {filtered.map(h => <HostelCard key={h.id} hostel={h} tweaks={tweaks} />)}
+          {filtered.length > 0 ? (
+            filtered.map(h => <HostelCard key={h.id} hostel={h} tweaks={tweaks} />)
+          ) : !loading && (
+            <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0', color: '#999' }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>🏘️</div>
+              <p style={{ fontSize: 16, fontWeight: 500 }}>No hostels found matching your criteria.</p>
+            </div>
+          )}
         </div>
 
         {/* View all */}
         <div style={{ textAlign: 'center', marginTop: 52 }}>
           <button 
+            onClick={() => router.push('/find-hostels')}
             style={{
               padding: '14px 40px', 
               borderRadius: 10, 

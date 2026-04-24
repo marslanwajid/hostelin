@@ -9,6 +9,7 @@ export interface IHostel extends Document {
   adminFullName: string;
   adminEmail: string;
   adminPassword: string; // bcrypt hashed
+  images: string[];
   createdAt: Date;
 }
 
@@ -22,6 +23,7 @@ const HostelSchema = new Schema<IHostel>(
     adminFullName: { type: String, required: true },
     adminEmail: { type: String, required: true, unique: true, lowercase: true, trim: true },
     adminPassword: { type: String, required: true },
+    images: { type: [String], default: [] },
   },
   { timestamps: true }
 );

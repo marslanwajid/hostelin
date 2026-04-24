@@ -107,8 +107,30 @@ export default function ListHostelWizard({ tweaks }: Props) {
     }
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleSubmit = async () => {
     try {
+      // Convert hostel images to base64
+      const hostelImagesB64 = await Promise.all(
+        data.hostelImages.map(img => img.file ? fileToBase64(img.file) : Promise.resolve(img.preview))
+      );
+
+      // Convert room images to base64 map
+      const roomImagesB64: Record<string, string[]> = {};
+      for (const [rid, imgs] of Object.entries(data.roomImages)) {
+        roomImagesB64[rid] = await Promise.all(
+          imgs.map(img => img.file ? fileToBase64(img.file) : Promise.resolve(img.preview))
+        );
+      }
+
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -123,6 +145,9 @@ export default function ListHostelWizard({ tweaks }: Props) {
           adminPassword: data.adminPassword,
           buildings: data.buildings,
           rooms: data.rooms,
+          pricing: data.pricing,
+          hostelImages: hostelImagesB64,
+          roomImages: roomImagesB64,
         }),
       });
 

@@ -69,6 +69,22 @@ export default function AdminOverview() {
           })}
         </div>
       </div>
+
+      {/* Hostel Photos Section */}
+      {meta?.images && meta.images.length > 0 && (
+        <div style={{ marginTop: 32, background: "white", borderRadius: 16, padding: 28, border: "1px solid #f0f0f0" }}>
+          <h2 style={{ fontFamily: "var(--font-plus-jakarta), sans-serif", fontWeight: 700, fontSize: 18, color: "#2C2C2C", marginBottom: 20 }}>
+            Hostel Gallery
+          </h2>
+          <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 12 }}>
+            {meta.images.map((url, idx) => (
+              <div key={idx} style={{ flexShrink: 0, width: 220, height: 140, borderRadius: 12, overflow: "hidden", border: "1px solid #eee" }}>
+                <img src={url} alt={`Hostel ${idx + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

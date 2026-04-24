@@ -4,6 +4,7 @@ export interface IBuilding extends Document {
   hostelId: Types.ObjectId;
   name: string;
   gender: "Boys" | "Girls" | "Co-ed";
+  images: string[];
 }
 
 const BuildingSchema = new Schema<IBuilding>(
@@ -11,6 +12,7 @@ const BuildingSchema = new Schema<IBuilding>(
     hostelId: { type: Schema.Types.ObjectId, ref: "Hostel", required: true },
     name: { type: String, required: true },
     gender: { type: String, enum: ["Boys", "Girls", "Co-ed"], default: "Co-ed" },
+    images: { type: [String], default: [] },
   },
   { timestamps: true }
 );

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { IconMapPin, IconCalendar, IconSearch } from '../icons';
 import { Tweaks } from '@/lib/types';
 
@@ -9,14 +10,20 @@ interface HeroSearchCardProps {
 }
 
 export default function HeroSearchCard({ tweaks }: HeroSearchCardProps) {
+  const router = useRouter();
   const [city, setCity] = useState('');
   const [checkin, setCheckin] = useState('');
-  const [checkout, setCheckout] = useState('');
   const [stayType, setStayType] = useState('Monthly');
   
   const red = tweaks?.primaryColor || '#C0392B';
   const cities = ['Lahore', 'Karachi', 'Islamabad', 'Peshawar', 'Faisalabad', 'Quetta', 'Multan'];
   const stayTypes = ['Daily', 'Weekly', 'Monthly'];
+
+  const handleSearch = () => {
+    let url = '/find-hostels';
+    if (city) url += `?city=${encodeURIComponent(city)}`;
+    router.push(url);
+  };
 
   const inputStyle: React.CSSProperties = { 
     width: '100%', 
@@ -96,20 +103,6 @@ export default function HeroSearchCard({ tweaks }: HeroSearchCardProps) {
           </div>
         </div>
         <div>
-          <label style={labelStyle}>Check-Out</label>
-          <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
-              <IconCalendar size={15} color="#aaa" />
-            </div>
-            <input 
-              type="date" 
-              value={checkout} 
-              onChange={e => setCheckout(e.target.value)} 
-              style={{ ...inputStyle, paddingLeft: 32 }} 
-            />
-          </div>
-        </div>
-        <div>
           <label style={labelStyle}>Stay Type</label>
           <div style={{ display: 'flex', gap: 5 }}>
             {stayTypes.map(t => (
@@ -137,6 +130,7 @@ export default function HeroSearchCard({ tweaks }: HeroSearchCardProps) {
           </div>
         </div>
         <button 
+          onClick={handleSearch}
           style={{ 
             padding: '13px 20px', 
             borderRadius: 10, 

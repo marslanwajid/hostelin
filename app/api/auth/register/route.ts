@@ -6,6 +6,14 @@ import Building from "@/lib/models/Building";
 import Floor from "@/lib/models/Floor";
 import Room from "@/lib/models/Room";
 import Bed from "@/lib/models/Bed";
+ 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: "20mb",
+    },
+  },
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,7 +23,7 @@ export async function POST(req: NextRequest) {
     const {
       hostelName, city, town, registrationNumber, fullAddress,
       adminFullName, adminEmail, adminPassword,
-      buildings, rooms
+      buildings, rooms, pricing
     } = body;
 
     // Check if email already exists
@@ -33,6 +41,7 @@ export async function POST(req: NextRequest) {
       adminFullName,
       adminEmail: adminEmail.toLowerCase(),
       adminPassword: hashedPassword,
+      images: body.hostelImages || [],
     });
 
     // Create buildings, floors, rooms, beds
@@ -41,6 +50,7 @@ export async function POST(req: NextRequest) {
         hostelId: hostel._id,
         name: wb.name,
         gender: mapGender(wb.gender),
+        images: [], // Buildings don't have separate images in wizard yet
       });
 
       // Find rooms for this building and group by floor
@@ -62,9 +72,14 @@ export async function POST(req: NextRequest) {
         // Create rooms and beds for this floor
         const floorRooms = floorMap.get(i) || [];
         for (const wr of floorRooms) {
+          const p = (pricing || []).find((pr: any) => pr.roomId === wr.id) || {};
           const room = await Room.create({
             floorId: floor._id,
             roomNumber: wr.roomNumber,
+            images: (body.roomImages || {})[wr.id] || [],
+            priceMonthly: p.monthly ? (parseInt(p.monthlyPrice) || 0) : 0,
+            priceWeekly: p.weekly ? (parseInt(p.weeklyPrice) || 0) : 0,
+            priceDaily: p.daily ? (parseInt(p.dailyPrice) || 0) : 0,
           });
 
           // Create beds

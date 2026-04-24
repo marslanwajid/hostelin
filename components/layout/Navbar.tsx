@@ -8,12 +8,15 @@ import { Tweaks } from "@/lib/types";
 interface NavbarProps {
   scrolled: boolean;
   tweaks: Tweaks;
+  forceSolid?: boolean;
 }
 
-export default function Navbar({ scrolled, tweaks }: NavbarProps) {
+export default function Navbar({ scrolled, tweaks, forceSolid = false }: NavbarProps) {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const red = tweaks?.primaryColor || "#C0392B";
   const router = useRouter();
+
+  const effectiveScrolled = scrolled || forceSolid;
 
   const linkStyle = (isScrolled: boolean): React.CSSProperties => ({
     fontSize: 14,
@@ -35,10 +38,10 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
           left: 0,
           right: 0,
           zIndex: 1000,
-          background: scrolled ? "rgba(255,255,255,0.97)" : "transparent",
-          backdropFilter: scrolled ? "blur(14px)" : "none",
-          boxShadow: scrolled ? "0 2px 28px rgba(0,0,0,0.09)" : "none",
-          borderBottom: scrolled ? "1px solid rgba(0,0,0,0.06)" : "none",
+          background: effectiveScrolled ? "rgba(255,255,255,0.97)" : "transparent",
+          backdropFilter: effectiveScrolled ? "blur(14px)" : "none",
+          boxShadow: effectiveScrolled ? "0 2px 28px rgba(0,0,0,0.09)" : "none",
+          borderBottom: effectiveScrolled ? "1px solid rgba(0,0,0,0.06)" : "none",
           transition: "all 0.38s cubic-bezier(.4,0,.2,1)",
         }}
       >
@@ -50,21 +53,27 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
             display: "grid",
             gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
-            height: scrolled ? 62 : 80,
+            height: effectiveScrolled ? 62 : 80,
             transition: "height 0.38s cubic-bezier(.4,0,.2,1)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 36 }} className="nav-left">
-            {[["Find Hostels", "#listings"], ["How It Works", "#how"]].map(([label, href]) => (
+            {[["Find Hostels", "/find-hostels"], ["How It Works", "#how"]].map(([label, href]) => (
               <a
                 key={label}
                 href={href}
-                style={linkStyle(scrolled)}
+                onClick={(e) => {
+                  if (href.startsWith("/")) {
+                    e.preventDefault();
+                    router.push(href);
+                  }
+                }}
+                style={linkStyle(effectiveScrolled)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = red;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = scrolled ? "#2C2C2C" : "rgba(255,255,255,0.9)";
+                  e.currentTarget.style.color = effectiveScrolled ? "#2C2C2C" : "rgba(255,255,255,0.9)";
                 }}
               >
                 {label}
@@ -77,8 +86,8 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
               src="/uploads/logo.webp"
               alt="HostelIn"
               style={{
-                height: scrolled ? 36 : 54,
-                filter: scrolled ? "none" : "brightness(0) invert(1)",
+                height: effectiveScrolled ? 36 : 54,
+                filter: effectiveScrolled ? "none" : "brightness(0) invert(1)",
                 transition: "all 0.38s cubic-bezier(.4,0,.2,1)",
                 display: "block",
                 cursor: "pointer",
@@ -92,12 +101,12 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
               <a
                 key={label}
                 href={href}
-                style={linkStyle(scrolled)}
+                style={linkStyle(effectiveScrolled)}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = red;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = scrolled ? "#2C2C2C" : "rgba(255,255,255,0.9)";
+                  e.currentTarget.style.color = effectiveScrolled ? "#2C2C2C" : "rgba(255,255,255,0.9)";
                 }}
               >
                 {label}
@@ -108,9 +117,9 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
                 style={{
                   padding: "8px 18px",
                   borderRadius: 8,
-                  border: `1.5px solid ${scrolled ? red : "rgba(255,255,255,0.6)"}`,
+                  border: `1.5px solid ${effectiveScrolled ? red : "rgba(255,255,255,0.6)"}`,
                   background: "transparent",
-                  color: scrolled ? red : "white",
+                  color: effectiveScrolled ? red : "white",
                   fontFamily: "var(--font-dm-sans), sans-serif",
                   fontWeight: 600,
                   fontSize: 13,
@@ -125,8 +134,8 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = "transparent";
-                  e.currentTarget.style.color = scrolled ? red : "white";
-                  e.currentTarget.style.borderColor = scrolled ? red : "rgba(255,255,255,0.6)";
+                  e.currentTarget.style.color = effectiveScrolled ? red : "white";
+                  e.currentTarget.style.borderColor = effectiveScrolled ? red : "rgba(255,255,255,0.6)";
                 }}
                 onClick={() => router.push("/list-hostel")}
               >
@@ -172,7 +181,7 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
             className="mobile-menu-btn"
             aria-label="Toggle menu"
           >
-            {menuOpen ? <IconX color={scrolled ? "#2C2C2C" : "white"} size={26} /> : <IconMenu color={scrolled ? "#2C2C2C" : "white"} size={26} />}
+            {menuOpen ? <IconX color={effectiveScrolled ? "#2C2C2C" : "white"} size={26} /> : <IconMenu color={effectiveScrolled ? "#2C2C2C" : "white"} size={26} />}
           </button>
         </div>
       </nav>
@@ -181,7 +190,7 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
         <div
           style={{
             position: "fixed",
-            top: scrolled ? 62 : 80,
+            top: effectiveScrolled ? 62 : 80,
             left: 0,
             right: 0,
             zIndex: 999,
@@ -194,7 +203,7 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
           className="mobile-dropdown"
         >
           {[
-            ["Find Hostels", "#listings"],
+            ["Find Hostels", "/find-hostels"],
             ["How It Works", "#how"],
             ["List Your Hostel", "/list-hostel"],
             ["Blog", "#"],
@@ -204,9 +213,9 @@ export default function Navbar({ scrolled, tweaks }: NavbarProps) {
               key={label}
               href={href}
               onClick={(e) => {
-                if (href === "/list-hostel") {
+                if (href.startsWith("/")) {
                   e.preventDefault();
-                  router.push("/list-hostel");
+                  router.push(href);
                 }
                 setMenuOpen(false);
               }}

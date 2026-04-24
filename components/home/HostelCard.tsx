@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { IconBuilding, IconCheck, IconMapPin, IconStar, IconWifi, IconUtensils, IconWind, IconZap, IconShield } from '../icons';
 import { Tweaks } from '@/lib/types';
 
@@ -34,6 +35,7 @@ const StarRating = ({ rating }: { rating: number }) => {
 };
 
 export default function HostelCard({ hostel, tweaks }: HostelCardProps) {
+  const router = useRouter();
   const red = tweaks?.primaryColor || '#C0392B';
   const [hov, setHov] = useState(false);
   const typeColors: Record<string, string> = { Male: '#2980b9', Female: '#8e44ad', 'Co-ed': '#27ae60' };
@@ -42,25 +44,40 @@ export default function HostelCard({ hostel, tweaks }: HostelCardProps) {
     <div
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
+      onClick={() => router.push(`/hostel/${hostel.id}`)}
       style={{
         background: 'white',
-        borderRadius: 20,
+        borderRadius: 24,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
         cursor: 'pointer',
-        boxShadow: hov ? '0 20px 60px rgba(0,0,0,0.16)' : '0 4px 24px rgba(0,0,0,0.08)',
-        transform: hov ? 'translateY(-6px)' : 'none',
-        border: hov ? `1.5px solid ${red}33` : '1.5px solid transparent',
-        transition: 'all 0.3s cubic-bezier(.4,0,.2,1)'
+        boxShadow: hov ? '0 30px 60px rgba(0,0,0,0.12)' : '0 10px 30px rgba(0,0,0,0.04)',
+        transform: hov ? 'translateY(-8px)' : 'none',
+        border: hov ? `1.5px solid ${red}33` : '1.5px solid #f0f0f0',
+        transition: 'all 0.4s cubic-bezier(.4,0,.2,1)'
       }}
     >
       {/* Image placeholder */}
-      <div style={{ height: 185, position: 'relative', overflow: 'hidden', flexShrink: 0, background: hostel.grad }}>
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.18 }}>
-          <IconBuilding size={80} color="white" />
-        </div>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,0.5) 0%,transparent 60%)' }} />
+      <div style={{ height: 185, position: 'relative', overflow: 'hidden', flexShrink: 0, background: hostel.grad || 'linear-gradient(135deg, #eee 0%, #ddd 100%)' }}>
+        {hostel.image ? (
+          <img 
+            src={hostel.image} 
+            alt={hostel.name} 
+            style={{ 
+              width: '100%', 
+              height: '100%', 
+              objectFit: 'cover', 
+              transform: hov ? 'scale(1.08)' : 'scale(1)',
+              transition: 'transform 0.6s cubic-bezier(.4,0,.2,1)' 
+            }}
+          />
+        ) : (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.18 }}>
+            <IconBuilding size={80} color="white" />
+          </div>
+        )}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,0,0.6) 0%,transparent 60%)' }} />
         {hostel.verified && (
           <div style={{ position: 'absolute', top: 12, left: 12, borderRadius: 100, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5, background: red }}>
             <IconCheck size={11} color="white" />
@@ -97,8 +114,12 @@ export default function HostelCard({ hostel, tweaks }: HostelCardProps) {
         <div style={{ marginTop: 'auto', paddingTop: 18, borderTop: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#999' }}>From </span>
-            <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: 22, color: red }}>Rs {hostel.price}</span>
-            <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#999' }}>/mo</span>
+            <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: 22, color: red }}>
+              {hostel.price === "Check Price" ? "Check Price" : `Rs ${hostel.price}`}
+            </span>
+            {hostel.price !== "Check Price" && (
+              <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: '#999' }}>/mo</span>
+            )}
           </div>
           <button style={{ 
             padding: '10px 20px', 

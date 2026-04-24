@@ -23,6 +23,7 @@ export interface MockRoom {
   roomNumber: string;
   beds: MockBed[];
   images: MockImage[];
+  priceMonthly?: number;
 }
 
 export interface MockFloor {
@@ -46,6 +47,7 @@ export interface HostelMeta {
   adminFullName: string;
   adminEmail: string;
   hostelId: string;
+  images: string[];
 }
 
 /* ============================================================
@@ -85,12 +87,14 @@ interface AdminDataContextType {
   apiAddFloor: (buildingId: string, floorNumber: number) => Promise<MockFloor | null>;
   apiEditFloor: (floorId: string, floorNumber: number) => Promise<boolean>;
   apiDeleteFloor: (floorId: string) => Promise<boolean>;
-  apiAddRoom: (floorId: string, roomNumber: string, bedCount: number) => Promise<MockRoom | null>;
-  apiEditRoom: (roomId: string, roomNumber: string) => Promise<boolean>;
+  apiAddRoom: (floorId: string, roomNumber: string, bedCount: number, priceMonthly?: number) => Promise<MockRoom | null>;
+  apiEditRoom: (roomId: string, roomNumber: string, priceMonthly?: number) => Promise<boolean>;
   apiDeleteRoom: (roomId: string) => Promise<boolean>;
   apiAddBed: (roomId: string) => Promise<MockBed | null>;
   apiToggleBed: (bedId: string, isOccupied: boolean, occupantName?: string) => Promise<boolean>;
   apiDeleteBed: (bedId: string) => Promise<boolean>;
+  apiUpdateBuildingImages: (buildingId: string, images: string[]) => Promise<boolean>;
+  apiUpdateRoomImages: (roomId: string, images: string[]) => Promise<boolean>;
 }
 
 const AdminDataContext = createContext<AdminDataContextType | null>(null);
@@ -120,6 +124,17 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       if (data.buildings) {
         setBuildings(data.buildings);
       }
+      if (data.hostel) {
+        setMeta({
+          hostelName: data.hostel.hostelName,
+          city: data.hostel.city,
+          town: data.hostel.town,
+          adminFullName: data.hostel.adminFullName,
+          adminEmail: data.hostel.adminEmail,
+          hostelId: data.hostel._id,
+          images: data.hostel.images || [],
+        });
+      }
     } catch (err) {
       console.error("Failed to fetch buildings:", err);
     } finally {
@@ -142,8 +157,16 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       });
       const data = await res.json();
       if (data.building) {
-        setBuildings((prev) => [...prev, data.building]);
-        return data.building;
+        const b = data.building;
+        const newB: MockBuilding = {
+          id: (b.id || b._id).toString(),
+          name: b.name,
+          gender: b.gender,
+          images: [],
+          floors: [],
+        };
+        setBuildings((prev) => [...prev, newB]);
+        return newB;
       }
     } catch (err) { console.error(err); }
     return null;
@@ -190,8 +213,14 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       });
       const data = await res.json();
       if (data.floor) {
-        setBuildings((prev) => prev.map((b) => b.id === buildingId ? { ...b, floors: [...b.floors, data.floor] } : b));
-        return data.floor;
+        const f = data.floor;
+        const newF: MockFloor = {
+          id: (f.id || f._id).toString(),
+          floorNumber: f.floorNumber,
+          rooms: [],
+        };
+        setBuildings((prev) => prev.map((b) => b.id === buildingId ? { ...b, floors: [...b.floors, newF] } : b));
+        return newF;
       }
     } catch (err) { console.error(err); }
     return null;
@@ -235,31 +264,42 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
-  const apiAddRoom = async (floorId: string, roomNumber: string, bedCount: number): Promise<MockRoom | null> => {
+  const apiAddRoom = async (floorId: string, roomNumber: string, bedCount: number, priceMonthly?: number): Promise<MockRoom | null> => {
     try {
       const res = await fetch("/api/hostel/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ floorId, roomNumber, bedCount }),
+        body: JSON.stringify({ floorId, roomNumber, bedCount, priceMonthly: priceMonthly || 0 }),
       });
       const data = await res.json();
       if (data.room) {
+        const r = data.room;
+        const newR: MockRoom = {
+          id: (r.id || r._id).toString(),
+          roomNumber: r.roomNumber,
+          images: [],
+          priceMonthly: r.priceMonthly || 0,
+          beds: (r.beds || []).map((bd: any) => ({
+            id: (bd.id || bd._id).toString(),
+            isOccupied: false,
+          })),
+        };
         setBuildings((prev) => prev.map((b) => ({
           ...b,
-          floors: b.floors.map((f) => f.id === floorId ? { ...f, rooms: [...f.rooms, data.room] } : f),
+          floors: b.floors.map((f) => f.id === floorId ? { ...f, rooms: [...f.rooms, newR] } : f),
         })));
-        return data.room;
+        return newR;
       }
     } catch (err) { console.error(err); }
     return null;
   };
 
-  const apiEditRoom = async (roomId: string, roomNumber: string): Promise<boolean> => {
+  const apiEditRoom = async (roomId: string, roomNumber: string, priceMonthly?: number): Promise<boolean> => {
     try {
       const res = await fetch("/api/hostel/rooms", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId, roomNumber }),
+        body: JSON.stringify({ roomId, roomNumber, priceMonthly }),
       });
       const data = await res.json();
       if (data.success) {
@@ -267,7 +307,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
           ...b,
           floors: b.floors.map((f) => ({
             ...f,
-            rooms: f.rooms.map((r) => r.id === roomId ? { ...r, roomNumber } : r),
+            rooms: f.rooms.map((r) => r.id === roomId ? { ...r, roomNumber, priceMonthly: priceMonthly ?? r.priceMonthly } : r),
           })),
         })));
         return true;
@@ -307,14 +347,19 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       });
       const data = await res.json();
       if (data.bed) {
+        const bd = data.bed;
+        const newBed: MockBed = {
+          id: (bd.id || bd._id).toString(),
+          isOccupied: false,
+        };
         setBuildings((prev) => prev.map((b) => ({
           ...b,
           floors: b.floors.map((f) => ({
             ...f,
-            rooms: f.rooms.map((r) => r.id === roomId ? { ...r, beds: [...r.beds, data.bed] } : r),
+            rooms: f.rooms.map((r) => r.id === roomId ? { ...r, beds: [...r.beds, newBed] } : r),
           })),
         })));
-        return data.bed;
+        return newBed;
       }
     } catch (err) { console.error(err); }
     return null;
@@ -375,6 +420,64 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
+  const apiUpdateBuildingImages = async (buildingId: string, images: string[]): Promise<boolean> => {
+    try {
+      console.log(`🚀 Sending PATCH to /api/hostel/buildings for building ${buildingId}, images: ${images.length}`);
+      const res = await fetch("/api/hostel/buildings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ buildingId, images }),
+      });
+      const data = await res.json();
+      console.log(`📩 PATCH response:`, data);
+      if (data.success) {
+        setBuildings((prev) =>
+          prev.map((b) =>
+            b.id === buildingId
+              ? { ...b, images: images.map((url) => ({ id: url.slice(-10), url })) }
+              : b
+          )
+        );
+        return true;
+      }
+    } catch (err) {
+      console.error("apiUpdateBuildingImages error:", err);
+    }
+    return false;
+  };
+
+  const apiUpdateRoomImages = async (roomId: string, images: string[]): Promise<boolean> => {
+    try {
+      console.log(`🚀 Sending PATCH to /api/hostel/rooms for room ${roomId}, images: ${images.length}`);
+      const res = await fetch("/api/hostel/rooms", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId, images }),
+      });
+      const data = await res.json();
+      console.log(`📩 PATCH room response:`, data);
+      if (data.success) {
+        setBuildings((prev) =>
+          prev.map((b) => ({
+            ...b,
+            floors: b.floors.map((f) => ({
+              ...f,
+              rooms: f.rooms.map((r) =>
+                r.id === roomId
+                  ? { ...r, images: images.map((url) => ({ id: url.slice(-10), url })) }
+                  : r
+              ),
+            })),
+          }))
+        );
+        return true;
+      }
+    } catch (err) {
+      console.error("apiUpdateRoomImages error:", err);
+    }
+    return false;
+  };
+
   return (
     <AdminDataContext.Provider
       value={{
@@ -384,6 +487,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         apiAddFloor, apiEditFloor, apiDeleteFloor,
         apiAddRoom, apiEditRoom, apiDeleteRoom,
         apiAddBed, apiToggleBed, apiDeleteBed,
+        apiUpdateBuildingImages, apiUpdateRoomImages,
       }}
     >
       {children}

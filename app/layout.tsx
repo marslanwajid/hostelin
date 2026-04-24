@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${plusJakarta.variable} antialiased`}>
-      <body className="min-h-full flex flex-col text-[#2C2C2C] bg-white">{children}</body>
+      <body suppressHydrationWarning className="min-h-full flex flex-col text-[#2C2C2C] bg-white">{children}</body>
     </html>
   );
 }

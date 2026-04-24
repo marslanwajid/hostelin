@@ -35,7 +35,30 @@ import {
 const uid = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 export default function BuildingsManagement() {
-  const { buildings, setBuildings, apiAddBuilding, apiDeleteBuilding, apiAddFloor, apiDeleteFloor, apiAddRoom, apiDeleteRoom, apiAddBed, apiDeleteBed, apiToggleBed } = useAdminData();
+  const {
+    buildings,
+    setBuildings,
+    apiAddBuilding,
+    apiDeleteBuilding,
+    apiAddFloor,
+    apiDeleteFloor,
+    apiAddRoom,
+    apiDeleteRoom,
+    apiAddBed,
+    apiDeleteBed,
+    apiToggleBed,
+    apiUpdateBuildingImages,
+    apiUpdateRoomImages,
+  } = useAdminData();
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
 
   // Collapse state — default collapsed (empty = collapsed, toggled entries = open)
   const [openBuildings, setOpenBuildings] = useState<Record<string, boolean>>({});
@@ -49,70 +72,57 @@ export default function BuildingsManagement() {
   const toggleFloor = (id: string) => setOpenFloors((p) => ({ ...p, [id]: !p[id] }));
 
   /* ---------- IMAGE HANDLERS ---------- */
-  const addBuildingImages = (buildingId: string, files: File[]) => {
-    const imgs = files.map((f) => ({ id: uid("img"), url: URL.createObjectURL(f) }));
-    setBuildings((prev) =>
-      prev.map((b) => (b.id === buildingId ? { ...b, images: [...b.images, ...imgs] } : b))
-    );
+  const addBuildingImages = async (buildingId: string, files: File[]) => {
+    const building = buildings.find((b) => b.id === buildingId);
+    if (!building) return;
+
+    const newB64 = await Promise.all(files.map((f) => fileToBase64(f)));
+    const allImages = [...building.images.map((img) => img.url), ...newB64];
+
+    await apiUpdateBuildingImages(buildingId, allImages);
   };
 
-  const removeBuildingImage = (buildingId: string, imageId: string) =>
-    setBuildings((prev) =>
-      prev.map((b) =>
-        b.id === buildingId ? { ...b, images: b.images.filter((i) => i.id !== imageId) } : b
-      )
-    );
+  const removeBuildingImage = async (buildingId: string, imageId: string) => {
+    const building = buildings.find((b) => b.id === buildingId);
+    if (!building) return;
 
-  const addRoomImages = (buildingId: string, floorId: string, roomId: string, files: File[]) => {
-    const imgs = files.map((f) => ({ id: uid("img"), url: URL.createObjectURL(f) }));
-    setBuildings((prev) =>
-      prev.map((b) =>
-        b.id !== buildingId
-          ? b
-          : {
-              ...b,
-              floors: b.floors.map((f) =>
-                f.id !== floorId
-                  ? f
-                  : {
-                      ...f,
-                      rooms: f.rooms.map((r) =>
-                        r.id !== roomId ? r : { ...r, images: [...r.images, ...imgs] }
-                      ),
-                    }
-              ),
-            }
-      )
-    );
+    const allImages = building.images.filter((i) => i.id !== imageId).map((img) => img.url);
+
+    await apiUpdateBuildingImages(buildingId, allImages);
   };
 
-  const removeRoomImage = (
+  const addRoomImages = async (
+    buildingId: string,
+    floorId: string,
+    roomId: string,
+    files: File[]
+  ) => {
+    const building = buildings.find((b) => b.id === buildingId);
+    const floor = building?.floors.find((f) => f.id === floorId);
+    const room = floor?.rooms.find((r) => r.id === roomId);
+    if (!room) return;
+
+    const newB64 = await Promise.all(files.map((f) => fileToBase64(f)));
+    const allImages = [...room.images.map((img) => img.url), ...newB64];
+
+    await apiUpdateRoomImages(roomId, allImages);
+  };
+
+  const removeRoomImage = async (
     buildingId: string,
     floorId: string,
     roomId: string,
     imageId: string
-  ) =>
-    setBuildings((prev) =>
-      prev.map((b) =>
-        b.id !== buildingId
-          ? b
-          : {
-              ...b,
-              floors: b.floors.map((f) =>
-                f.id !== floorId
-                  ? f
-                  : {
-                      ...f,
-                      rooms: f.rooms.map((r) =>
-                        r.id !== roomId
-                          ? r
-                          : { ...r, images: r.images.filter((i) => i.id !== imageId) }
-                      ),
-                    }
-              ),
-            }
-      )
-    );
+  ) => {
+    const building = buildings.find((b) => b.id === buildingId);
+    const floor = building?.floors.find((f) => f.id === floorId);
+    const room = floor?.rooms.find((r) => r.id === roomId);
+    if (!room) return;
+
+    const allImages = room.images.filter((i) => i.id !== imageId).map((img) => img.url);
+
+    await apiUpdateRoomImages(roomId, allImages);
+  };
 
   /* ---------- BED HANDLERS ---------- */
   const toggleBed = (
@@ -993,13 +1003,14 @@ function RoomBlock({
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 10,
-                  padding: "8px 12px",
-                  borderRadius: 10,
-                  border: `1.5px solid ${bed.isOccupied ? "#fca5a5" : "#a7f3d0"}`,
-                  background: bed.isOccupied ? "#fef2f2" : "#f0fdf4",
-                  minWidth: 150,
-                  position: "relative",
+                  justifyContent: "space-between",
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  border: `1.5px solid ${bed.isOccupied ? "#fee2e2" : "#dcfce7"}`,
+                  background: bed.isOccupied ? "#fffafa" : "#fafff9",
+                  minWidth: 180,
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
                 }}
               >
                 <div
@@ -1014,36 +1025,36 @@ function RoomBlock({
                 >
                   <div
                     style={{
-                      width: 22,
-                      height: 22,
+                      width: 28,
+                      height: 28,
                       borderRadius: "50%",
                       background: bed.isOccupied ? "#ef4444" : "#22c55e",
                       color: "white",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      boxShadow: `0 4px 12px ${bed.isOccupied ? "rgba(239,68,68,0.25)" : "rgba(34,197,94,0.25)"}`,
                     }}
                   >
-                    {bed.isOccupied ? <IconX size={12} /> : <IconCheck size={12} />}
+                    {bed.isOccupied ? <IconX size={14} /> : <IconCheck size={14} />}
                   </div>
                   <div>
                     <div
                       style={{
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: 700,
                         color: bed.isOccupied ? "#991b1b" : "#166534",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
                       }}
                     >
                       Bed {i + 1}
+                      {bed.isOccupied && <span style={{ fontSize: 10, background: "#fee2e2", padding: "1px 6px", borderRadius: 100 }}>Occupied</span>}
                     </div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        color: bed.isOccupied ? "#ef4444" : "#22c55e",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {bed.isOccupied ? bed.occupantName || "Occupied" : "Available"}
+                    <div style={{ fontSize: 11, color: bed.isOccupied ? "#7f1d1d" : "#166534", opacity: 0.8, marginTop: 2 }}>
+                      {bed.isOccupied ? (bed.occupantName || "Occupied") : "Available"}
+                      {bed.isOccupied && bed.occupiedSince && ` • ${bed.occupiedSince}`}
                     </div>
                   </div>
                 </div>
