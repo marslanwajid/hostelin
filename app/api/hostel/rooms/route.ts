@@ -3,13 +3,7 @@ import dbConnect from "@/lib/db";
 import Room from "@/lib/models/Room";
 import Bed from "@/lib/models/Bed";
  
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: "10mb",
-    },
-  },
-};
+
 
 // POST /api/hostel/rooms — add a room with beds
 export async function POST(req: NextRequest) {

@@ -1054,7 +1054,7 @@ function RoomBlock({
                     </div>
                     <div style={{ fontSize: 11, color: bed.isOccupied ? "#7f1d1d" : "#166534", opacity: 0.8, marginTop: 2 }}>
                       {bed.isOccupied ? (bed.occupantName || "Occupied") : "Available"}
-                      {bed.isOccupied && bed.occupiedSince && ` • ${bed.occupiedSince}`}
+                      {bed.isOccupied && bed.occupiedDate && ` • ${bed.occupiedDate}`}
                     </div>
                   </div>
                 </div>

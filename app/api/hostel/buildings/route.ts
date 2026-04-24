@@ -6,13 +6,7 @@ import Room from "@/lib/models/Room";
 import Bed from "@/lib/models/Bed";
 import Hostel from "@/lib/models/Hostel";
  
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: "10mb",
-    },
-  },
-};
+
 
 // GET /api/hostel/buildings?hostelId=xxx — returns full nested hierarchy
 export async function GET(req: NextRequest) {

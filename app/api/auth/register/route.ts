@@ -7,13 +7,7 @@ import Floor from "@/lib/models/Floor";
 import Room from "@/lib/models/Room";
 import Bed from "@/lib/models/Bed";
  
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: "20mb",
-    },
-  },
-};
+
 
 export async function POST(req: NextRequest) {
   try {
